@@ -1,6 +1,6 @@
 # YTM AI Blocker
 
-**v3.1.0 · by Kahraman MELEK®**
+**v3.1.1 · by Kahraman MELEK®**
 
 [English](README.md) · [Türkçe](README.tr.md)
 
@@ -33,7 +33,9 @@ macOS dosyayı açmazsa bu klasörde Terminal açıp `zsh Kurulum.command`, ard�
 
 ## Atlama kuralı
 
-Ses sürekli yakalanır. İlk dört saniyeden sonra, son dört saniyelik kayan pencere saniyede bir analiz edilir. Skor ilk kez **%80’i geçince** beş saniyelik sayaç başlar. Yeni skor **%80’in altına düşerse** sayaç sıfırlanır. Tam %80 var olan süreyi sürdürür ama yeni süre başlatmaz. Güncel sonuçlar kesintisiz beş saniyeyi kapsarsa parça atlanır. Eksik/yavaş analiz, duraklatma, sarma ve parça değişimi süreyi iptal eder. Dört saniyelik model penceresi anlık değişimleri yumuşatır.
+Ses sürekli yakalanır; kayan dört saniyelik pencere saniyede bir analiz edilir. Kısa yanlış alarmları azaltmak için karar sinyali birbiriyle **örtüşmeyen** üç ses bölümünün medyanı ve güncel ham skorla sınırlanır. Üç geçerli bölüm oluşana kadar gösterge belirsiz kalır (yaklaşık 12 saniye). Bu değer korumalı sinyaldir; kalibre edilmiş YZ olasılığı değildir.
+
+Sinyal ilk kez **%80’i geçince** beş saniyelik sayaç başlar. Yeni değer **%80’in altına düşerse** sıfırlanır. Tam %80 var olan süreyi sürdürür, yeni süre başlatmaz. Güncel sonuçlar kesintisiz beş saniyeyi kapsamalıdır. Eksik/geçersiz analiz, duraklatma, sarma ve parça değişimi kanıtları sıfırlar. En erken atlama yaklaşık 12 saniye hazırlık + beş saniye ve model gecikmesidir. Bazı gerçek YZ parçaları daha geç yakalanabilir veya kaçabilir. [Sınırlı yanlış pozitif incelemesi](docs/FALSE-POSITIVE-INVESTIGATION.md).
 
 İzin butonu kararı kaydetmeyi beklemeden yerel olarak uygular; sıradaki otomatik atlama mesajı o parça için reddedilir. Otomatik atla anahtarı genel durdurma kontrolüdür. Eski sürümden kalmış kanal engelleri Listeler’de kaldırılabilir, ancak artık kanalın diğer parçalarını atlatmaz.
 
@@ -61,3 +63,7 @@ python3 tools/build_release.py
 Panel stillerini `extension/panel.css` içinde düzenle; paketleyici gömülü stil dosyasını yeniler. Otomatik testlerde Chrome araçları taklit edilir; güncelleme sonrasında gerçek tarayıcıda ses yakalama ve atlama ayrıca denenmelidir. `tools/preview.html` yalnızca simüle geliştirme önizlemesidir ve dağıtım paketine girmez.
 
 Eklenti ZIP’i yalnızca tarayıcı dosyalarını içerir; gerekli yerel yardımcıyı kurmaz. GitHub’dan dağıtım geliştirici moduyla kurulumdur. Chrome Web Store yayını ayrı bir adımdır.
+
+## v3.1.1
+
+Bağımsız ses bölümleriyle kısa skor sıçraması denetimi; geçersiz sonuçta eski skoru temizleme. Dil seçimine uygun yüzde/ondalık biçimi: TR %72,4; EN 72.4%.

@@ -16,12 +16,14 @@ for name in ['README.md', 'README.tr.md', 'THIRD_PARTY_NOTICES.md', 'PROVENANCE-
              'Start.command', 'Install.command', 'Başlat.command', 'Kurulum.command']:
     files.append(ROOT / name)
 for folder, suffixes in [('extension', {'.js', '.mjs', '.json', '.html', '.css'}),
-                         ('server', {'.py', '.txt'}), ('tests', {'.py', '.mjs'}),
+                         ('server', {'.py', '.txt'}), ('tests', {'.py', '.mjs', '.json'}),
                          ('docs', {'.jpg', '.md'}), ('.github', {'.yml'})]:
     for file in (ROOT / folder).rglob('*'):
+        if file.name == 'github-published.jpg': continue
         if file.is_file() and file.suffix in suffixes and 'models' not in file.parts and '__pycache__' not in file.parts:
             files.append(file)
 files.append(ROOT / 'tools/build_release.py')
+files.append(ROOT / 'tools/evaluate_audio.py')
 artifacts = []
 for name, members, prefix in [(f'ytm-ai-blocker-{VERSION}-source.zip', files, 'ytm-ai-blocker'),
                               (f'ytm-ai-blocker-{VERSION}-extension.zip', [p for p in files if p.is_relative_to(ROOT / 'extension')], '')]:

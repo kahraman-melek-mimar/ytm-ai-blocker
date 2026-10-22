@@ -62,6 +62,7 @@ Contact Email, Support URL, Homepage URL: not supplied.
 
 | Version | Date | Changes | Status |
 |---|---|---|---|
+| 3.1.1 | 2026-10-23 | Guarded decision signal from three disjoint windows, clear invalid scores, language-aware percentage formatting. No model retraining. | Draft |
 | 3.1.0 | 2026-10-23 | Movable bilingual panel; stereo RMS meters and central AI gauge; track-only blocking; single production-label line. | Draft |
 | 3.0.5 | 2026-10-23 | Üretim beyanı ve sağlayıcı ismi ipuçları; dijital kimlik kontrolünün sınırları açıkça gösterilir. | Draft |
 | 3.0.4 | 2026-10-22 | Saniyede bir kayan pencere skoru; düşüşte sıfırlanan 5 saniyelik süre. | Draft |
@@ -79,3 +80,7 @@ Not ready for submission: real-song detection accuracy unmeasured; model license
 ## v3.1.0 update
 
 TR/EN panel and native locale metadata; saved draggable position; true stereo RMS levels in dBFS; no track title in main panel; allow/revoke controls and video-ID-only blocks. Preferences now include UI language and panel position. No new permissions or external destinations. Permission/host justifications remain unchanged. New panel images in docs are simulated UI previews, not final Web Store screenshots. Not submitted.
+
+## v3.1.1 review note
+
+Displayed percentage is now a conservative decision signal, not a calibrated probability. Three disjoint windows are required before scoring. Source includes score-only regression traces; copyrighted audio excerpts are not redistributed. No general genre accuracy claim. New screenshots must reflect locale-aware percent placement.

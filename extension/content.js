@@ -1,6 +1,6 @@
 (() => {
   if (document.getElementById('ytm-ai-blocker')) return;
-  const VERSION = '3.1.0';
+  const VERSION = '3.1.1';
   let settings = {enabled: true, blocked: {}, allowed: {}};
   let preferences = {language: navigator.language?.toLowerCase().startsWith('tr') ? 'tr' : 'en', position: null};
   let current = null, lastSkipped = '', seekToken = 0, lastScoreAt = 0, lastLevelAt = 0;
@@ -64,11 +64,11 @@
   }
   function renderScore() {
     const score = scoreView.score;
-    el('score').textContent = score === null ? '—' : `${score.toFixed(1)}%`;
+    el('score').textContent = score === null ? '—' : YTMI18n.formatPercent(preferences.language, score);
     el('ai').style.setProperty('--turn', `${score === null ? 0 : score * 2.7}deg`);
     el('ai').style.setProperty('--accent', score > 80 ? '#ff967e' : '#75dfb1');
     if (score === null) { el('ai').removeAttribute('aria-valuenow'); el('ai').setAttribute('aria-valuetext', tr('noScore')); }
-    else { el('ai').setAttribute('aria-valuenow', String(score)); el('ai').setAttribute('aria-valuetext', `${score.toFixed(1)}%`); }
+    else { el('ai').setAttribute('aria-valuenow', String(score)); el('ai').setAttribute('aria-valuetext', YTMI18n.formatPercent(preferences.language, score)); }
     el('age').textContent = lastScoreAt ? tr('scoreAge', {age: Math.floor((Date.now() - lastScoreAt) / 1000)}) : tr('noScore');
   }
   function level(channel, rms) {
@@ -135,6 +135,11 @@
       else status('listening');
       el('status').title = message.detail || message.text || '';
     }
+    if (message.type === 'SCORE_PENDING') {
+      scoreView.reset(); lastScoreAt = 0; renderScore();
+      el('countdown').hidden = true;
+      status('comparing', {count: message.count});
+    }
     if (message.type === 'SCORE' && scoreView.accept(message.probability, message.seconds)) {
       lastScoreAt = Date.now(); renderScore();
     }
@@ -144,8 +149,8 @@
     if (message.type === 'COUNTDOWN') {
       el('countdown').hidden = message.elapsed === null;
       el('countdown').value = message.elapsed || 0;
-      el('countdown').setAttribute('aria-label', tr('countdown', {elapsed: (message.elapsed || 0).toFixed(1)}));
-      if (message.elapsed !== null) status('countdown', {elapsed: message.elapsed.toFixed(1)});
+      el('countdown').setAttribute('aria-label', tr('countdown', {elapsed: YTMI18n.formatNumber(preferences.language, message.elapsed || 0)}));
+      if (message.elapsed !== null) status('countdown', {elapsed: YTMI18n.formatNumber(preferences.language, message.elapsed)});
     }
     if (message.type === 'SKIP' && settings.enabled && !settings.allowed[message.id]) next(message.id);
   });

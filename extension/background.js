@@ -1,4 +1,5 @@
 import {Decision} from './core.mjs';
+import {Evidence} from './evidence.mjs';
 let session = null;
 let operation = false;
 let creating;
@@ -6,10 +7,11 @@ let creating;
 const restored = (async () => {
   const {captureSession} = await chrome.storage.session.get('captureSession');
   if (!captureSession || !await chrome.offscreen.hasDocument()) return;
-  session = {...captureSession, decision: Object.assign(new Decision(), captureSession.decision)};
+  session = {...captureSession, decision: Object.assign(new Decision(), captureSession.decision),
+    evidence: Object.assign(new Evidence(), captureSession.evidence || {})};
 })();
 async function persistSession() {
-  await chrome.storage.session.set({captureSession: session ? {...session, decision: {...session.decision}} : null});
+  await chrome.storage.session.set({captureSession: session ? {...session, decision: {...session.decision}, evidence: {...session.evidence}} : null});
 }
 async function offscreen() {
   if (await chrome.offscreen.hasDocument()) return;
@@ -42,7 +44,7 @@ chrome.action.onClicked.addListener(async tab => {
     await stop();
     await offscreen();
     const streamId = await chrome.tabCapture.getMediaStreamId({targetTabId: tab.id});
-    session = {tabId: tab.id, track: null, epoch: crypto.randomUUID(), decision: new Decision()};
+    session = {tabId: tab.id, track: null, epoch: crypto.randomUUID(), decision: new Decision(), evidence: new Evidence()};
     const result = await chrome.runtime.sendMessage({target: 'audio', type: 'START', streamId});
     if (!result?.ok) throw new Error(result?.error || 'Ses yakalanamadı.');
     await persistSession();
@@ -65,7 +67,7 @@ chrome.runtime.onMessage.addListener((message, sender, reply) => {
       const t = message.track;
       if (s.track?.id !== t.id || s.track?.playing !== t.playing || s.track?.enabled !== t.enabled || s.track?.seekToken !== t.seekToken ||
           Math.abs((s.track?.position ?? 0) - t.position) > 2) {
-        s.epoch = crypto.randomUUID(); s.decision.reset();
+        s.epoch = crypto.randomUUID(); s.decision.reset(); s.evidence.reset();
         s.skipped = false;
         await send(s.tabId, {type: 'COUNTDOWN', elapsed: null});
         await chrome.runtime.sendMessage({target: 'audio', type: 'TRACK', epoch: s.epoch,
@@ -93,20 +95,28 @@ chrome.runtime.onMessage.addListener((message, sender, reply) => {
         reply({ok: true, ignored: true}); return;
       }
       if (message.error) {
-        s.decision.reset();
+        s.decision.reset(); s.evidence.reset();
+        await send(s.tabId, {type: 'SCORE_PENDING', count: 0});
         await send(s.tabId, {type: 'COUNTDOWN', elapsed: null});
         await send(s.tabId, {type: 'STATUS', code: message.errorCode || 'analysisError', detail: message.error});
       } else {
-        s.decision.sample(message.probability, Date.now(), message.sampleTime);
-        await send(s.tabId, {type: 'SCORE', probability: message.probability, seconds: message.seconds});
-        const decision = s.decision.tick(Date.now(), true);
-        if (decision.skip) {
-          s.skipped = true;
-          await send(s.tabId, {type: 'SKIP', id: s.track.id,
-            reason: 'Skipping AI Music… YZ skoru 5 saniye boyunca eşik altına düşmedi.'});
+        const estimate = s.evidence.sample(message.probability, Date.now(), message.sampleTime);
+        if (!estimate.ready) {
+          s.decision.reset();
+          await send(s.tabId, {type: 'SCORE_PENDING', count: estimate.count});
+          await send(s.tabId, {type: 'COUNTDOWN', elapsed: null});
         } else {
-          await send(s.tabId, {type: 'STATUS', code: 'listening'});
-          await send(s.tabId, {type: 'COUNTDOWN', elapsed: decision.remaining === null ? null : s.decision.seconds});
+          s.decision.sample(estimate.score, Date.now(), message.sampleTime);
+          await send(s.tabId, {type: 'SCORE', probability: estimate.score, rawProbability: message.probability, seconds: message.seconds});
+          const decision = s.decision.tick(Date.now(), true);
+          if (decision.skip) {
+            s.skipped = true;
+            await send(s.tabId, {type: 'SKIP', id: s.track.id,
+              reason: 'Five seconds above threshold, supported by disjoint-window evidence.'});
+          } else {
+            await send(s.tabId, {type: 'STATUS', code: 'listening'});
+            await send(s.tabId, {type: 'COUNTDOWN', elapsed: decision.remaining === null ? null : s.decision.seconds});
+          }
         }
       }
     }

@@ -34,3 +34,14 @@ test('all manifest script and locale references exist', async () => {
     assert.ok(messages.extensionName.message); assert.ok(messages.extensionDescription.message);
   }
 });
+
+test('percent sign and decimal separator follow the selected language', async () => {
+  const {YTMI18n: {formatPercent, formatNumber}} = await load('i18n.js');
+  assert.equal(formatPercent('tr',72.4),'%72,4');
+  assert.equal(formatPercent('en',72.4),'72.4%');
+  assert.equal(formatPercent('tr',0),'%0,0');
+  assert.equal(formatPercent('en',100),'100.0%');
+  assert.equal(formatPercent('tr',NaN),'—');
+  assert.equal(formatNumber('tr',3.5),'3,5');
+  assert.equal(formatNumber('en',3.5),'3.5');
+});

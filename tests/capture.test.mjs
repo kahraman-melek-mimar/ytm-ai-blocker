@@ -57,7 +57,7 @@ test('background rejects old track results after navigation, pause and seek', as
   let epoch = audio.at(-1).epoch;
   const source = {url: 'chrome-extension://test/offscreen.html'};
   await deliver({type: 'RESULT', epoch, probability: .95}, source);
-  assert.ok(sent.some(m => m.type === 'SCORE' && m.probability === .95));
+  assert.ok(sent.some(m => m.type === 'SCORE_PENDING' && m.count === 1));
   assert.equal(sent.some(m => m.type === 'SKIP'), false);
   for (const change of [{id: 'two'}, {playing: false}, {playing: true, seekToken: 1}]) {
     Object.assign(track, change);

@@ -1,6 +1,6 @@
 # YTM AI Blocker
 
-**v3.1.0 · by Kahraman MELEK®**
+**v3.1.1 · by Kahraman MELEK®**
 
 [English](README.md) · [Türkçe](README.tr.md)
 
@@ -15,7 +15,7 @@ A Chrome extension for YouTube Music with local AI-audio scoring, stereo level m
 - Movable compact panel. Drag the header or focus it and use the arrow keys. Position is saved and kept within the viewport.
 - Turkish and English UI, remembered independently of the browser language. Native extension name/description translations are included.
 - Left/right VU-style audio meters: independent RMS levels in dBFS, updated roughly 10 times per second. These are digital level meters, not broadcast-calibrated VU instruments. Mono input is mirrored.
-- Central AI score meter, updated by the model roughly once per second. It is independent of audio loudness and is not animated with invented scores.
+- Central guarded AI-signal meter, updated from model results roughly once per second. It is independent of audio loudness and is not animated with invented scores.
 - No song title in the main panel.
 - Block **this track**, not the entire artist/channel. Allow a track immediately and revoke that allowance later. Manage saved entries from Lists.
 - A single production-label line, with no expandable provenance section. “None” means no readable label was found; it does not mean human-made or watermark-free.
@@ -35,7 +35,9 @@ This release targets Chrome on macOS. A Chrome-installed app window must expose 
 
 ## Automatic skipping
 
-Audio is captured continuously. After a four-second warm-up, a rolling four-second window is analyzed at one-second intervals. When a model score first exceeds **80%**, a five-second timer starts. A subsequent score below 80% resets it. Exactly 80% maintains an existing timer but does not start one. The track is skipped only when fresh results cover all five seconds without a drop below the threshold. Missing/slow analysis, pause, seeking and track changes cancel the timer. The model’s four-second window smooths rapid changes; the score is not sample-by-sample watermark verification.
+Audio is captured continuously and rolling four-second windows are analyzed every second. To suppress short false alarms, the decision signal is capped by the median of three **disjoint** four-second windows and by the current raw score. The gauge stays unknown until three valid disjoint windows are available (about 12 seconds). The result is a conservative signal, not a calibrated AI probability.
+
+When that signal first exceeds **80%**, a five-second timer starts. A subsequent value below 80% resets it. Exactly 80% maintains an existing timer but does not start one. Fresh results must cover all five seconds. Missing/invalid analysis, pause, seeking and track changes clear evidence. Earliest skip is roughly 12 seconds of warm-up plus five seconds, plus inference latency. This may miss or delay genuine AI tracks. See the [limited false-positive investigation](docs/FALSE-POSITIVE-INVESTIGATION.md).
 
 **Allow this track** updates local policy immediately, before saving it, so a queued skip for that track is rejected. Auto-skip is the broad pause switch. Saved channel blocks from older versions are listed for removal but no longer cause channel-wide skipping.
 
@@ -63,3 +65,7 @@ python3 tools/build_release.py
 Edit `extension/panel.css`, then run the release builder to refresh its bundled script. Tests check the bundle matches. `tools/preview.html` is a developer-only simulated UI, excluded from releases. Tests use Chrome API mocks; a fresh live Chrome capture/skip session is still required after installing updates.
 
 The extension ZIP contains only browser files and **does not include or install the required local helper**. GitHub distribution is a development install; Chrome Web Store publication is separate.
+
+## v3.1.1
+
+Short-spike protection based on disjoint-window evidence; invalid results clear old scores. Percent placement and decimal separator follow the selected language (TR: %72,4; EN: 72.4%).

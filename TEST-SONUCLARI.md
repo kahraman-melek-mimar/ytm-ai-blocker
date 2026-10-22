@@ -31,3 +31,7 @@ Canlı v3.0.1 panelinde gerçek model skoru %0 ve ses toplama %25 birlikte okund
 ## v3.1.0
 
 22 JavaScript tests: TR/EN message parity, manifest asset references, style bundle consistency, independent left/right RMS with AI sampling off, track-only blocks and allowance override, worker restart restore, plus existing model decision and provenance regressions. Browser preview checks: mouse dragging, arrow-key movement, persisted position/language after reload, TR/EN controls, allowance toggle and Lists dialog. Preview values are simulated; actual stereo measurement is separately unit-tested. Live Chrome extension capture and skipping after this update remain to be verified after reload.
+
+## v3.1.1
+
+27 JavaScript tests: measured score-trace regressions from two limited human-reference excerpts, disjoint-window warm-up, fresh score dip reset, invalid output reset, and TR/EN percent sign/decimal formatting. Local reference replay suppresses short high spikes; it does not establish live tab-capture accuracy or positive-class recall.
