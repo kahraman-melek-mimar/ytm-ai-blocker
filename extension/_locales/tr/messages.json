@@ -1,0 +1,11 @@
+{
+  "extensionName": {
+    "message": "YTM AI Blocker by Kahraman MELEK®"
+  },
+  "extensionDescription": {
+    "message": "YouTube Music için yerel YZ ses analizi, stereo seviye göstergeleri ve parça engelleme."
+  },
+  "actionTitle": {
+    "message": "YTM AI Blocker: ses analizini başlat / durdur"
+  }
+}

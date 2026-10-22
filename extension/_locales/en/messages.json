@@ -1,0 +1,11 @@
+{
+  "extensionName": {
+    "message": "YTM AI Blocker by Kahraman MELEK®"
+  },
+  "extensionDescription": {
+    "message": "Local AI audio analysis, stereo level meters and track blocking for YouTube Music."
+  },
+  "actionTitle": {
+    "message": "YTM AI Blocker: start / stop audio analysis"
+  }
+}

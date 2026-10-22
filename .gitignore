@@ -1,0 +1,11 @@
+.venv/
+__pycache__/
+server/models/
+.DS_Store
+.npm-cache/
+.agents/
+dist/
+.env
+.env.*
+*.key
+*.pem

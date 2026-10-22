@@ -1,0 +1,52 @@
+{
+  "manifest_version": 3,
+  "name": "__MSG_extensionName__",
+  "version": "3.1.0",
+  "minimum_chrome_version": "116",
+  "description": "__MSG_extensionDescription__",
+  "permissions": [
+    "storage",
+    "tabCapture",
+    "offscreen",
+    "activeTab"
+  ],
+  "host_permissions": [
+    "https://music.youtube.com/*",
+    "http://127.0.0.1:5050/*"
+  ],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "action": {
+    "default_title": "__MSG_actionTitle__"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://music.youtube.com/*"
+      ],
+      "js": [
+        "player-bridge.js"
+      ],
+      "run_at": "document_idle",
+      "world": "MAIN"
+    },
+    {
+      "matches": [
+        "https://music.youtube.com/*"
+      ],
+      "js": [
+        "i18n.js",
+        "player-adapter.js",
+        "score-view.js",
+        "provenance.js",
+        "panel-style.js",
+        "track-policy.js",
+        "content.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "default_locale": "en"
+}
