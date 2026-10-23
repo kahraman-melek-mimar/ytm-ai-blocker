@@ -18,3 +18,6 @@ NumPy, ONNX Runtime and huggingface-hub are installed separately from their pack
 No permissive open-source license has been selected for the application source. Public visibility alone is not an additional license grant. This notice does not change third-party licenses.
 
 Uygulama kodu için henüz serbest bir açık kaynak lisansı seçilmedi. Deponun herkese açık olması ek lisans izni anlamına gelmez. Bu bildirim üçüncü taraf lisanslarını değiştirmez.
+
+
+Local numerical modification (v3.3.0): server/model_numerics.py derives artifactnet_v94_zero_guard.onnx from the pinned ArtifactNet graph. It guards exactly zero denominators in two HPSS divisions, without changing source weights or source graph. Original model licensing remains applicable; no model binaries are distributed. This derivative is not endorsed by the upstream author.

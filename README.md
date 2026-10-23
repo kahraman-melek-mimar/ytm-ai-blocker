@@ -1,71 +1,50 @@
-# YTM AI Blocker
+# YTM AI Blocker v3.4.0
 
-**v3.1.1 · by Kahraman MELEK®**
+[TR — Türkçe](README.tr.md)
 
-[English](README.md) · [Türkçe](README.tr.md)
+Experimental local audio scoring and personal track skipping for YouTube Music, by Kahraman MELEK®.
 
-A Chrome extension for YouTube Music with local AI-audio scoring, stereo level meters, and personal track blocking. **Requires the included local Python helper.** This is an experimental personal-use build; it does not reliably identify every AI-generated song.
+**YTM AI Blocker can make mistakes. Not recommended for DJ music or classical music.** Genuine recordings may be incorrectly flagged; AI-generated recordings may be missed. Scores are model estimates, not calibrated probabilities or proof of origin.
 
-![English panel preview with simulated input](docs/panel-preview-en.jpg)
+![English preview with simulated input](docs/panel-preview-en.jpg)
 
-*UI preview with simulated input. The screenshot is not a detection accuracy result.*
+## Install and start (macOS)
 
-## Features
+Requires Chrome/Chromium 116+, Python 3.10+, an internet connection for initial setup, and a local Python helper running while using audio analysis.
 
-- Movable compact panel. Drag the header or focus it and use the arrow keys. Position is saved and kept within the viewport.
-- Turkish and English UI, remembered independently of the browser language. Native extension name/description translations are included.
-- Left/right VU-style audio meters: independent RMS levels in dBFS, updated roughly 10 times per second. These are digital level meters, not broadcast-calibrated VU instruments. Mono input is mirrored.
-- Central guarded AI-signal meter, updated from model results roughly once per second. It is independent of audio loudness and is not animated with invented scores.
-- No song title in the main panel.
-- Block **this track**, not the entire artist/channel. Allow a track immediately and revoke that allowance later. Manage saved entries from Lists.
-- A single production-label line, with no expandable provenance section. “None” means no readable label was found; it does not mean human-made or watermark-free.
+1. Download this repository using **Code → Download ZIP**, extract it, and open `Install.command` (or `Kurulum.command`) once. Setup installs dependencies and downloads the model separately.
+2. Open `Start.command` (or `Başlat.command`) and keep its window open. The service listens only at `127.0.0.1:5050`.
+3. Open `chrome://extensions`, enable **Developer mode**, choose **Load unpacked**, and select the `extension` folder.
+4. Open YouTube Music and click the extension's toolbar icon to grant/start tab audio capture. Initial capture requires this Chrome action.
+5. Use the panel to pause/resume AI analysis. The audio connection and stereo meters stay active while analysis is paused. Click the toolbar icon again to end capture.
 
-## Requirements and installation (macOS)
+After an update, reload the extension, refresh YouTube Music, and restart capture. Restart the local helper when server files change. The local helper and unpacked extension must come from the same release.
 
-1. Install Python 3.10+ and Chrome 116+. Download/extract this repository or its source release. Keep all files together.
-2. Open `Install.command`. It creates `.venv` and downloads packages and the third-party model. Internet access is needed for setup.
-3. Open `Start.command`. Keep its Terminal window open. Use **Control+C** to stop; **Control+Z suspends the server and breaks analysis**.
-4. Open `chrome://extensions`, enable Developer mode, choose Load unpacked and select the `extension` folder. Disable older copies of the blocker.
-5. Open/reload `https://music.youtube.com`, play a track and click **YTM AI Blocker** in Chrome’s puzzle-piece extensions menu. Clicking again stops capture. The helper alone cannot start browser capture.
-6. Choose TR/EN in the panel. The two .command launchers also have Turkish equivalents: `Kurulum.command` and `Başlat.command`.
+## Behavior
 
-If macOS will not open the launcher, open Terminal in the project folder and run `zsh Install.command`, then `zsh Start.command`.
+- The panel opens at the right edge, vertically centered. Drag its header or use arrow keys while the header is focused. **Lists → Reset position** returns it to the right-center position.
+- TR/EN language selection, integer percentages, a green–yellow–red **AI Meter**, scale ticks and a decaying peak marker.
+- Independent left/right RMS level meters in dBFS, with ticks, decaying peak markers and a gradient from green at 10% of the display scale to red at 90%+. These are VU-style digital meters, not calibrated broadcast VU instruments.
+- Four-second mono model windows advance every second. Stereo channels are kept separate for the level meters.
+- AI timing verdict: score **strictly above 80% for four continuous seconds**, OR **three separate runs of at least three seconds each** within the same track. A single run counts once. A score at/below 80% ends the current run; completed runs remain until evidence is reset by track/seek/pause, missing/invalid samples or restarting analysis.
+- **Auto-skip on:** a fresh qualifying model verdict skips the track. **Auto-skip off:** analysis, meters and the displayed verdict continue without a model-triggered skip. Allowed tracks are not automatically skipped.
+- Block individual tracks, allow them, and manage entries in **Lists**. Model-triggered skips do not permanently block tracks.
+- **Automatically skipped** lists up to 200 local entries with track title, time, reason and the most recent score. It records a next-button click followed by observed track change; failed/unavailable next controls do not create history entries. Records can be removed individually.
+- The bottom-left **!** opens warnings on hover, focus or click. Escape/outside click dismisses the bubble.
+- Click **by Kahraman MELEK®** to open a GitHub suggestion form. Submission is manual, public, and requires a GitHub account.
 
-This release targets Chrome on macOS. A Chrome-installed app window must expose the extension action; if it does not, use a regular YouTube Music tab in the same Chrome profile. Safari and independent Electron music apps are not supported by this extension.
+## Provenance and privacy
 
-## Automatic skipping
+The live **Production label** reads available text declarations/provider mentions such as Suno or Udio. **None** does not mean human-made. **Digital provenance: Unverified** is intentional: live C2PA/SynthID verification is not integrated. Tab-captured PCM does not carry the original file's C2PA metadata.
 
-Audio is captured continuously and rolling four-second windows are analyzed every second. To suppress short false alarms, the decision signal is capped by the median of three **disjoint** four-second windows and by the current raw score. The gauge stays unknown until three valid disjoint windows are available (about 12 seconds). The result is a conservative signal, not a calibrated AI probability.
+Live audio is processed in memory and sent only to the local helper. The extension does not save captured audio or upload listening data. Preferences, track blocks/allowances and skip history remain in local Chrome storage. Setup downloads packages/model files; those providers do not receive live listening data. Clicking a feedback or track link opens the chosen website.
 
-When that signal first exceeds **80%**, a five-second timer starts. A subsequent value below 80% resets it. Exactly 80% maintains an existing timer but does not start one. Fresh results must cover all five seconds. Missing/invalid analysis, pause, seeking and track changes clear evidence. Earliest skip is roughly 12 seconds of warm-up plus five seconds, plus inference latency. This may miss or delay genuine AI tracks. See the [limited false-positive investigation](docs/FALSE-POSITIVE-INVESTIGATION.md).
+Optional developer tools: `tools/read_c2pa.py` reads/extracts manifests from explicitly supplied local files. Install its separate pinned requirements with `python -m pip install -r tools/requirements-c2pa.txt`. It is not part of live auto-skip. Remote manifest and OCSP fetching are disabled; use `--trust-anchors` with an independently obtained local C2PA trust list. Manifest presence, trusted signatures, and AI assertions are distinct results.
 
-**Allow this track** updates local policy immediately, before saving it, so a queued skip for that track is rejected. Auto-skip is the broad pause switch. Saved channel blocks from older versions are listed for removal but no longer cause channel-wide skipping.
+## Validation and limitations
 
-## Privacy and provenance
+Run `npm test` and `python -m unittest discover -s tests -p 'test_*.py'` after installing NumPy. `python tools/build_release.py` builds source/extension archives without models, environments, private audio, analysis reports or local settings. Preview screenshots use simulated input and are not detection accuracy results.
 
-Playback audio goes only to `http://127.0.0.1:5050` on the same computer. It is held in memory and not saved to disk or sent to a cloud detector. Block/allow lists and panel preferences are stored locally. Setup downloads dependencies/model files; there is no runtime analytics.
+The local helper derives a zero-denominator guard for two HPSS divisions in the pinned ArtifactNet graph. Original graph/weights are preserved. This fixes a reproduced numerical failure; it does **not** establish classification accuracy. See [known limitations](docs/KNOWN-LIMITATIONS.md).
 
-The production-label line reads accessible text declarations. A Suno/Udio name mention is not proof of AI generation. C2PA file credentials and proprietary audio watermarks are **not verified** by this extension. The third-party acoustic model is a statistical classifier, not a Suno or SynthID signature decoder. See [provenance research](PROVENANCE-ARASTIRMA.md).
-
-## Limitations and model license
-
-False positives and missed detections are possible. Turkish AI songs have been reported to receive low scores in informal user testing; accuracy has not been benchmarked by language. Use the allowance and auto-skip controls.
-
-The model is **ArtifactNet v9.4 by intrect**, licensed **CC BY-NC 4.0** for non-commercial use. We do not redistribute its weights in the repository or source release; setup downloads a pinned revision. Commercial deployment requires appropriate permission from its owner. Public source availability is not a grant of a permissive license to this application’s code. See [third-party notices](THIRD_PARTY_NOTICES.md).
-
-## Development and checks
-
-```sh
-node --test tests/*.test.mjs
-python3 -m pip install 'numpy>=1.26,<3'
-python3 -m unittest discover -s tests -p 'test_*.py'
-python3 tools/build_release.py
-```
-
-Edit `extension/panel.css`, then run the release builder to refresh its bundled script. Tests check the bundle matches. `tools/preview.html` is a developer-only simulated UI, excluded from releases. Tests use Chrome API mocks; a fresh live Chrome capture/skip session is still required after installing updates.
-
-The extension ZIP contains only browser files and **does not include or install the required local helper**. GitHub distribution is a development install; Chrome Web Store publication is separate.
-
-## v3.1.1
-
-Short-spike protection based on disjoint-window evidence; invalid results clear old scores. Percent placement and decimal separator follow the selected language (TR: %72,4; EN: 72.4%).
+The model is separately licensed **CC BY-NC 4.0** with additional owner notices. It is downloaded during setup and is not included here. See [third-party notices](THIRD_PARTY_NOTICES.md). No Chrome Web Store publication is claimed.

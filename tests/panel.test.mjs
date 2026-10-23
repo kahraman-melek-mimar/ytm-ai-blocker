@@ -9,8 +9,8 @@ async function load(file) {
 test('TR and EN cover the same UI messages without unresolved placeholders', async () => {
   const {YTMI18n: {messages, translate}} = await load('i18n.js');
   assert.deepEqual(Object.keys(messages.tr).sort(), Object.keys(messages.en).sort());
-  assert.equal(translate('en', 'countdown', {elapsed: '3.0'}), 'AI high · 3.0 / 5 sec');
-  assert.equal(translate('tr', 'block'), 'Bu parçayı engelle ve geç');
+  assert.equal(translate('en', 'countdown', {elapsed: '3.0', runs: 1}), 'Time: 3.0 / 4 sec · Runs: 1 / 3');
+  assert.equal(translate('tr', 'block'), 'Parçayı Engelle ve Geç');
 });
 test('track block never blocks other songs by the same channel; allowance wins immediately', async () => {
   const {YTMTrackPolicy: policy} = await load('track-policy.js');
@@ -37,11 +37,31 @@ test('all manifest script and locale references exist', async () => {
 
 test('percent sign and decimal separator follow the selected language', async () => {
   const {YTMI18n: {formatPercent, formatNumber}} = await load('i18n.js');
-  assert.equal(formatPercent('tr',72.4),'%72,4');
-  assert.equal(formatPercent('en',72.4),'72.4%');
-  assert.equal(formatPercent('tr',0),'%0,0');
-  assert.equal(formatPercent('en',100),'100.0%');
+  assert.equal(formatPercent('tr',72.4),'%72');
+  assert.equal(formatPercent('en',72.4),'72%');
+  assert.equal(formatPercent('tr',0),'%0');
+  assert.equal(formatPercent('en',100),'100%');
   assert.equal(formatPercent('tr',NaN),'—');
   assert.equal(formatNumber('tr',3.5),'3,5');
   assert.equal(formatNumber('en',3.5),'3.5');
+});
+
+test('automatic skip history is bounded, deduplicated and separate from blocking', async () => {
+  const {YTMTrackPolicy: policy} = await load('track-policy.js');
+  let history=[];
+  for(let i=0;i<205;i++) history=policy.recordSkip(history,{eventId:`event-${i}`,id:'same-track',title:'Track',time:i,reason:'model'});
+  assert.equal(history.length,200); assert.equal(history[0].eventId,'event-204');
+  history=policy.recordSkip(history,{...history[0]});assert.equal(history.length,200);
+  assert.equal(history.filter(e=>e.eventId==='event-204').length,1);
+  assert.equal(policy.recordSkip(history,{id:'invalid'}),history);
+  const settings={allowed:{},blocked:{}};
+  assert.equal(policy.isBlocked(settings,'same-track'),false);
+});
+
+test('release warning copy and meter labels are explicit in both languages', async () => {
+ const {YTMI18n:{translate}}=await load('i18n.js');
+ assert.equal(translate('tr','ai'),'YZ Metre'); assert.equal(translate('en','ai'),'AI Meter');
+ for(const lang of ['tr','en']) for(const key of ['warning_error','warning_dj','warning_classical']) assert.notEqual(translate(lang,key),key);
+ assert.equal(translate('en','warning_dj'),'Not recommended for DJ music.');
+ assert.equal(translate('tr','warning_classical'),'Klasik müziklerde kullanılması önerilmez.');
 });

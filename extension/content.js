@@ -1,28 +1,58 @@
 (() => {
   if (document.getElementById('ytm-ai-blocker')) return;
-  const VERSION = '3.1.1';
+  const VERSION = '3.4.0';
   let settings = {enabled: true, blocked: {}, allowed: {}};
-  let preferences = {language: navigator.language?.toLowerCase().startsWith('tr') ? 'tr' : 'en', position: null};
+  let preferences = {language: navigator.language?.toLowerCase().startsWith('tr') ? 'tr' : 'en', position: null, dockVersion: 1};
   let current = null, lastSkipped = '', seekToken = 0, lastScoreAt = 0, lastLevelAt = 0;
+  let skipHistory = [], pendingSkip = null;
+  let modelVerdict = false;
+  let counterValues = {elapsed: 0, runs: 0};
+  let analysisPaused = false;
   let capture = false, tickBusy = false, messageState = {code: 'start', values: {}};
   const scoreView = new YTMScoreView();
+  const levelPeaks = {left: new YTMScoreView(), right: new YTMScoreView()};
   const host = document.createElement('div'); host.id = 'ytm-ai-blocker';
   const root = host.attachShadow({mode: 'open'});
   const css = document.createElement('style'); css.textContent = YTMPanelCSS;
   root.appendChild(css);
   const panel = document.createElement('section');
   panel.innerHTML = `<header><div id="handle" tabindex="0">⠿ YTM AI BLOCKER <small>v${VERSION}</small></div><select id="language"><option value="tr">TR</option><option value="en">EN</option></select></header>
-    <div class="meters"><div class="channel"><span id="left-label"></span><div class="well" role="meter" aria-valuemin="-60" aria-valuemax="0" aria-valuenow="-60" id="left-meter"><div class="fill" id="left-fill"></div></div><span class="db" id="left-db">−∞</span></div>
-    <div class="ai" id="ai" role="meter" aria-valuemin="0" aria-valuemax="100" aria-valuetext="—"><div class="readout"><small id="ai-label"></small><div id="score">—</div><div id="age"></div></div></div>
-    <div class="channel"><span id="right-label"></span><div class="well" role="meter" aria-valuemin="-60" aria-valuemax="0" aria-valuenow="-60" id="right-meter"><div class="fill" id="right-fill"></div></div><span class="db" id="right-db">−∞</span></div></div>
-    <div id="status" role="status" aria-live="polite"></div><progress id="countdown" hidden max="5" value="0"></progress>
-    <div class="controls"><label class="switch" for="enabled"><span id="auto-label"></span><input id="enabled" type="checkbox" checked></label><div class="actions"><button id="allow"></button><button id="block"></button></div></div>
-    <footer><span id="signature"></span><button id="lists"></button></footer><div class="brand"><span id="dot"></span>by Kahraman MELEK®</div>
+    <div class="meters"><div class="channel"><span id="left-label"></span><div class="vu-scale"><svg class="vu-ticks" id="left-ticks" viewBox="0 0 30 112" aria-hidden="true"></svg><div class="well" role="meter" aria-valuemin="-60" aria-valuemax="0" aria-valuenow="-60" id="left-meter"><div class="fill" id="left-fill"></div><div class="vu-peak" id="left-peak" aria-hidden="true"></div></div></div><span class="db" id="left-db">−∞</span></div>
+    <div class="ai" id="ai" role="meter" aria-valuemin="0" aria-valuemax="100" aria-valuetext="—"><div class="spectrum" aria-hidden="true"></div><svg id="dial-ticks" viewBox="0 0 158 158" aria-hidden="true"></svg><div id="peak" aria-hidden="true" hidden></div><div class="readout"><small id="ai-label"></small><div id="score">—</div><div id="age"></div></div></div>
+    <div class="channel"><span id="right-label"></span><div class="vu-scale"><svg class="vu-ticks" id="right-ticks" viewBox="0 0 30 112" aria-hidden="true"></svg><div class="well" role="meter" aria-valuemin="-60" aria-valuemax="0" aria-valuenow="-60" id="right-meter"><div class="fill" id="right-fill"></div><div class="vu-peak" id="right-peak" aria-hidden="true"></div></div></div><span class="db" id="right-db">−∞</span></div></div>
+    <div id="status" role="status" aria-live="polite"></div><div id="countdown-slot"><progress id="countdown" hidden max="4" value="0"></progress></div>
+    <div id="decision-basis"><div id="model-verdict"></div><div id="digital-proof"></div></div><div class="controls"><button id="analysis-toggle" type="button"></button><label class="switch" for="enabled"><span id="auto-label"></span><input id="enabled" type="checkbox" checked></label><div class="actions"><button id="allow"></button><button id="block"></button></div></div>
+    <footer><span id="signature"></span><button id="lists"></button></footer><div class="brand"><button id="warnings-button" type="button" aria-describedby="warnings-popover" aria-expanded="false" aria-controls="warnings-popover">!</button><span id="dot"></span><a id="feedback" href="https://github.com/kahraman-melek-mimar/ytm-ai-blocker/issues/new" target="_blank" rel="noopener noreferrer">by Kahraman MELEK®</a></div>
+    <div id="warnings-popover" popover="auto" role="tooltip"><strong id="warnings-title"></strong><ul><li id="warning-error"></li><li id="warning-dj"></li><li id="warning-classical"></li></ul></div>
     <dialog id="manager"><h2 id="list-title"></h2><div id="list"></div><div class="dialog-actions"><button id="reset-position"></button><button id="close"></button></div></dialog>`;
   root.appendChild(panel); document.documentElement.appendChild(host);
   const el = id => root.getElementById(id);
   const tr = (key, values) => YTMI18n.translate(preferences.language, key, values);
+  for (const channel of ['left','right']) for (let value=0;value<=100;value+=2) {
+    const major=value%10===0, y=1+(100-value)*1.1;
+    for (const [x1,x2] of major ? [[0,5],[25,30]] : [[2,5],[25,28]]) {
+      const line=document.createElementNS('http://www.w3.org/2000/svg','line');
+      for(const [key,v] of Object.entries({x1,x2,y1:y,y2:y})) line.setAttribute(key,String(v));
+      line.setAttribute('stroke-width',major?'1.6':'0.6');
+      el(`${channel}-ticks`).appendChild(line);
+    }
+  }
+  // A 270-degree scale: major ticks every 10%, minor ticks every 2%.
+  for (let value = 0; value <= 100; value += 2) {
+    const major = value % 10 === 0, angle = (225 + value * 2.7) * Math.PI / 180;
+    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    const inner = major ? 69 : 73;
+    for (const [key, coordinate] of Object.entries({x1:79+Math.sin(angle)*inner, y1:79-Math.cos(angle)*inner,
+      x2:79+Math.sin(angle)*77, y2:79-Math.cos(angle)*77})) line.setAttribute(key, String(coordinate));
+    line.setAttribute('stroke-width', major ? '2' : '0.8');
+    line.setAttribute('class', major ? 'major' : 'minor');
+    el('dial-ticks').appendChild(line);
+  }
+
   function status(code, values = {}) {
+    if (code === 'listening') {
+      code = 'countdown'; values = {elapsed: YTMI18n.formatNumber(preferences.language, counterValues.elapsed), runs: counterValues.runs};
+    }
     messageState = {code, values}; const text = tr(code, values);
     if (el('status').textContent !== text) el('status').textContent = text;
   }
@@ -47,32 +77,76 @@
       }
     }
     if (!el('list').childNodes.length) el('list').textContent = tr('empty');
+    const heading = document.createElement('h3'); heading.textContent = tr('autoHistory'); el('list').append(heading);
+    if (!skipHistory.length) {
+      const empty = document.createElement('p'); empty.textContent = tr('historyEmpty'); el('list').append(empty);
+    }
+    for (const item of skipHistory) {
+      const row = document.createElement('div'); row.className = 'history-entry';
+      const link = document.createElement('a'); link.textContent = item.title || item.id;
+      link.href = `https://music.youtube.com/watch?v=${encodeURIComponent(item.id)}`;
+      link.target = '_blank'; link.rel = 'noopener noreferrer';
+      const detail = document.createElement('small');
+      const time = new Intl.DateTimeFormat(preferences.language === 'tr' ? 'tr-TR' : 'en-US', {dateStyle:'short',timeStyle:'short'}).format(new Date(item.time));
+      detail.textContent = `${time} · ${tr(item.reason === 'blocked' ? 'historyBlocked' : 'historyModel')}${Number.isFinite(item.score) ? ` · ${YTMI18n.formatPercent(preferences.language,item.score)}` : ''}`;
+      const remove = document.createElement('button'); remove.textContent = tr('remove');
+      remove.onclick = async () => { skipHistory = skipHistory.filter(row => row.eventId !== item.eventId); renderLists(); await chrome.storage.local.set({skipHistory}); };
+      row.append(link,detail,remove); el('list').append(row);
+    }
+  }
+  function renderCapture() {
+    el('analysis-toggle').textContent = tr(!capture ? 'captureFirst' : analysisPaused ? 'analysisPaused' : 'listening');
+    el('analysis-toggle').disabled = !capture;
+    el('analysis-toggle').title = tr(!capture ? 'analysisControlHint' : analysisPaused ? 'analysisResume' : 'analysisPause');
+    el('analysis-toggle').classList.toggle('is-paused', capture && analysisPaused);
+    el('analysis-toggle').setAttribute('aria-pressed',String(capture && !analysisPaused));
   }
   function render() {
     panel.lang = preferences.language;
+    el('feedback').title = tr('feedbackHint');
+    el('feedback').setAttribute('aria-label',tr('feedbackHint'));
+    const feedback = new URL('https://github.com/kahraman-melek-mimar/ytm-ai-blocker/issues/new');
+    feedback.searchParams.set('title',tr('feedbackTitle'));
+    feedback.searchParams.set('body',tr('feedbackBody'));
+    el('feedback').href = feedback.href;
     el('language').value = preferences.language; el('language').setAttribute('aria-label', tr('language'));
     el('handle').setAttribute('aria-label', tr('drag')); el('handle').title = tr('drag');
     el('left-label').textContent = tr('left'); el('right-label').textContent = tr('right');
     for (const channel of ['left', 'right']) el(`${channel}-meter`).setAttribute('aria-label', `${tr(channel)} ${tr('level')} (dBFS)`);
     el('ai-label').textContent = tr('ai'); el('ai').setAttribute('aria-label', tr('scoreHint')); el('ai').title = tr('scoreHint');
+    el('warnings-button').setAttribute('aria-label',tr('warningsTitle'));
+    el('warnings-title').textContent = tr('warningsTitle');
+    for(const key of ['error','dj','classical']) el(`warning-${key}`).textContent = tr(`warning_${key}`);
     el('auto-label').textContent = tr('auto'); el('enabled').checked = settings.enabled;
     el('allow').textContent = tr(settings.allowed[current?.id] ? 'revoke' : 'allow');
     el('allow').classList.toggle('is-allowed', Boolean(settings.allowed[current?.id]));
     el('block').textContent = tr('block'); el('lists').textContent = tr('lists');
     el('list-title').textContent = tr('lists'); el('close').textContent = tr('close'); el('reset-position').textContent = tr('resetPosition');
-    status(messageState.code, messageState.values); renderOrigin(); renderLists(); renderScore();
+    status(messageState.code === 'countdown' ? 'listening' : messageState.code, messageState.values); renderOrigin(); renderLists(); renderScore(); renderVerdict(); renderCapture();
+  }
+  function renderVerdict() {
+    el('model-verdict').textContent = tr(modelVerdict ? 'modelSuspected' : 'modelUndecided');
+    el('model-verdict').classList.toggle('suspected', modelVerdict);
+    el('digital-proof').textContent = tr('proofUnverified');
+    el('decision-basis').title = tr('decisionBasisHint');
   }
   function renderScore() {
     const score = scoreView.score;
     el('score').textContent = score === null ? '—' : YTMI18n.formatPercent(preferences.language, score);
     el('ai').style.setProperty('--turn', `${score === null ? 0 : score * 2.7}deg`);
-    el('ai').style.setProperty('--accent', score > 80 ? '#ff967e' : '#75dfb1');
+    el('ai').style.setProperty('--accent', scoreView.color);
+    const peak = scoreView.advancePeak();
+    el('peak').hidden = peak === null;
+    if (peak !== null) el('peak').style.transform = `rotate(${225 + peak * 2.7}deg)`;
     if (score === null) { el('ai').removeAttribute('aria-valuenow'); el('ai').setAttribute('aria-valuetext', tr('noScore')); }
     else { el('ai').setAttribute('aria-valuenow', String(score)); el('ai').setAttribute('aria-valuetext', YTMI18n.formatPercent(preferences.language, score)); }
     el('age').textContent = lastScoreAt ? tr('scoreAge', {age: Math.floor((Date.now() - lastScoreAt) / 1000)}) : tr('noScore');
   }
   function level(channel, rms) {
     const db = rms > 0 ? Math.max(-60, Math.min(0, 20 * Math.log10(rms))) : -60;
+    const peakView = levelPeaks[channel];
+    peakView.accept((db + 60) / 60, 1);
+    el(`${channel}-peak`).style.transform = `translateY(${100 - peakView.peak}%)`;
     el(`${channel}-fill`).style.clipPath = `inset(${100 - (db + 60) / 60 * 100}% 0 0)`;
     el(`${channel}-db`).textContent = rms > .001 ? `${Math.round(db)}` : '−∞';
     el(`${channel}-meter`).setAttribute('aria-valuenow', String(Math.round(db)));
@@ -81,13 +155,21 @@
     const track = YTMPlayerAdapter.read();
     return {...track, seekToken, enabled: settings.enabled && !settings.allowed[track.id]};
   }
-  function next(id) {
+  function next(id, automaticReason = null) {
     const fresh = readTrack();
     if (!id || fresh.id !== id || lastSkipped === id || !fresh.playing) return;
     const button = YTMPlayerAdapter.nextButton();
     if (!button || button.disabled || button.getAttribute('aria-disabled') === 'true') { status('nextUnavailable'); return; }
-    lastSkipped = id; status('skipping'); button.click();
+    lastSkipped = id;
+    if (automaticReason) pendingSkip = {eventId:crypto.randomUUID(), id, title:fresh.title || id, time:Date.now(),
+      reason:automaticReason, score:automaticReason === 'model' ? scoreView.score : null};
+    status('skipping'); button.click();
   }
+  el('analysis-toggle').onclick = async () => {
+    el('analysis-toggle').disabled = true;
+    try { await chrome.runtime.sendMessage({type:'ANALYSIS_TOGGLE'}); await tick(); }
+    finally { renderCapture(); }
+  };
   el('enabled').onchange = async event => {
     settings.enabled = event.target.checked; render(); await tick(); await saveSettings();
   };
@@ -109,7 +191,7 @@
     const position = {left: Math.max(8, Math.min(left, Math.max(8, innerWidth - rect.width - 8))),
       top: Math.max(8, Math.min(top, Math.max(8, innerHeight - rect.height - 8)))};
     host.style.left = `${position.left}px`; host.style.top = `${position.top}px`;
-    host.style.right = 'auto'; host.style.bottom = 'auto'; preferences.position = position;
+    host.style.right = 'auto'; host.style.bottom = 'auto'; host.style.transform = 'none'; preferences.position = position;
   }
   const handle = el('handle');
   handle.onpointerdown = event => {
@@ -126,10 +208,41 @@
     event.preventDefault(); const rect = host.getBoundingClientRect(), [x, y] = directions[event.key];
     moveTo(rect.left + x, rect.top + y); savePreferences().catch(() => {});
   };
-  function clamp() { if (preferences.position) moveTo(preferences.position.left, preferences.position.top); }
+  function dockPanel() { for(const key of ['left','top','right','bottom','transform']) host.style[key] = ''; }
+  function clamp() {
+    if (preferences.position) moveTo(preferences.position.left, preferences.position.top);
+    else dockPanel();
+    if(el('warnings-popover').matches(':popover-open')) positionWarnings();
+  }
   addEventListener('resize', clamp); new ResizeObserver(clamp).observe(panel);
-  el('reset-position').onclick = async () => { moveTo(innerWidth - host.offsetWidth - 22, innerHeight - host.offsetHeight - 102); await savePreferences(); };
+  el('reset-position').onclick = async () => { preferences.position = null; dockPanel(); await savePreferences(); };
+  let warningPinned = false;
+  function positionWarnings() {
+    const button = el('warnings-button').getBoundingClientRect();
+    const bubble = el('warnings-popover').getBoundingClientRect();
+    const left = Math.max(8, Math.min(button.left, innerWidth - bubble.width - 8));
+    const top = button.top - bubble.height - 8 >= 8 ? button.top - bubble.height - 8 : Math.max(8, Math.min(button.bottom + 8, innerHeight - bubble.height - 8));
+    el('warnings-popover').style.left = `${left}px`; el('warnings-popover').style.top = `${top}px`;
+  }
+  function showWarnings() { el('warnings-popover').showPopover(); positionWarnings(); }
+  function hideWarnings() { if(!warningPinned) el('warnings-popover').hidePopover(); }
+  el('warnings-button').onmouseenter = showWarnings;
+  el('warnings-button').onmouseleave = hideWarnings;
+  el('warnings-button').onfocus = showWarnings;
+  el('warnings-button').onblur = hideWarnings;
+  el('warnings-button').onclick = () => {
+    warningPinned = !warningPinned;
+    if(warningPinned) showWarnings(); else el('warnings-popover').hidePopover();
+  };
+  el('warnings-popover').addEventListener('toggle',event => {
+    const open = event.newState === 'open';
+    el('warnings-button').setAttribute('aria-expanded',String(open));
+    if(!open) warningPinned = false;
+  });
   chrome.runtime.onMessage.addListener(message => {
+    if (message.type === 'MODEL_VERDICT' && message.id === current?.id) {
+      modelVerdict = Boolean(message.detected); renderVerdict();
+    }
     if (message.type === 'STATUS') {
       if (message.code) status(message.code, message.values);
       else status('listening');
@@ -147,16 +260,18 @@
       lastLevelAt = Date.now(); level('left', message.left); level('right', message.right);
     }
     if (message.type === 'COUNTDOWN') {
+      counterValues = {elapsed: Math.max(0, Math.min(4, Number(message.elapsed) || 0)), runs: Math.max(0, Math.min(3, Number(message.runs) || 0))};
       el('countdown').hidden = message.elapsed === null;
       el('countdown').value = message.elapsed || 0;
-      el('countdown').setAttribute('aria-label', tr('countdown', {elapsed: YTMI18n.formatNumber(preferences.language, message.elapsed || 0)}));
-      if (message.elapsed !== null) status('countdown', {elapsed: YTMI18n.formatNumber(preferences.language, message.elapsed)});
+      el('countdown').setAttribute('aria-label', tr('countdown', {elapsed: YTMI18n.formatNumber(preferences.language, message.elapsed || 0), runs: message.runs || 0}));
+      status('listening');
     }
-    if (message.type === 'SKIP' && settings.enabled && !settings.allowed[message.id]) next(message.id);
+    if (message.type === 'SKIP' && settings.enabled && !settings.allowed[message.id] && !analysisPaused) next(message.id, 'model');
   });
   chrome.storage.onChanged.addListener((changes, area) => {
     if (area !== 'local') return;
     if (changes.settings?.newValue) { settings = {...settings, ...changes.settings.newValue}; render(); }
+    if (changes.skipHistory?.newValue) { skipHistory = changes.skipHistory.newValue; renderLists(); }
     if (changes.panelPreferences?.newValue) { preferences = {...preferences, ...changes.panelPreferences.newValue}; render(); clamp(); }
   });
   document.addEventListener('seeking', () => { seekToken++; }, true);
@@ -164,28 +279,38 @@
     if (tickBusy) return; tickBusy = true;
     try {
       const track = readTrack();
-      if (current?.id !== track.id) { lastSkipped = ''; lastScoreAt = 0; scoreView.reset(); el('countdown').hidden = true; status('warming'); }
+      if (pendingSkip && track.id && track.id !== pendingSkip.id) {
+        const entry = pendingSkip; pendingSkip = null;
+        skipHistory = YTMTrackPolicy.recordSkip(skipHistory, entry);
+        await chrome.storage.local.set({skipHistory}); renderLists();
+      } else if (pendingSkip && Date.now() - pendingSkip.time > 10000) pendingSkip = null;
+      if (current?.id !== track.id) { counterValues = {elapsed:0,runs:0}; modelVerdict = false; renderVerdict(); lastSkipped = ''; lastScoreAt = 0; scoreView.reset(); el('countdown').hidden = true; status('warming'); }
       current = track; renderOrigin(); renderScore();
       el('allow').disabled = el('block').disabled = !track.id;
       el('allow').textContent = tr(settings.allowed[track.id] ? 'revoke' : 'allow');
       el('allow').classList.toggle('is-allowed', Boolean(settings.allowed[track.id]));
-      if (track.id && settings.enabled && YTMTrackPolicy.isBlocked(settings, track.id)) next(track.id);
+      if (track.id && settings.enabled && YTMTrackPolicy.isBlocked(settings, track.id)) next(track.id, 'blocked');
       if (Date.now() - lastLevelAt > 750) { level('left', 0); level('right', 0); }
       const response = await chrome.runtime.sendMessage({type: 'TRACK', track: {...track, description: undefined, disclosure: undefined}});
-      capture = Boolean(response?.capturing); el('dot').classList.toggle('on', capture);
+      const wasPaused = analysisPaused;
+      analysisPaused = Boolean(response?.paused);
+      if (analysisPaused !== wasPaused) { scoreView.reset(); lastScoreAt = 0; renderScore(); }
+      capture = Boolean(response?.capturing); renderCapture(); el('dot').classList.toggle('on', capture);
       el('dot').title = tr(capture ? 'captureOn' : 'captureOff');
-      if (!settings.enabled) { status('disabled'); el('countdown').hidden = true; }
-      else if (settings.allowed[track.id]) { status('allowed'); el('countdown').hidden = true; }
-      else if (!capture) status('start');
+      if (!capture) status('start');
+      else if (analysisPaused) { status('analysisPaused'); el('countdown').hidden = true; }
       else if (!track.id) status('noTrack');
       else if (!track.playing) status('paused');
+
     } catch { status('reload'); }
     finally { tickBusy = false; }
   }
   (async () => {
-    const data = await chrome.storage.local.get(['settings', 'panelPreferences']);
+    const data = await chrome.storage.local.get(['settings', 'panelPreferences', 'skipHistory']);
+    if (Array.isArray(data.skipHistory)) skipHistory = data.skipHistory.slice(0,200);
     if (data.settings) settings = {...settings, ...data.settings};
     if (data.panelPreferences) preferences = {...preferences, ...data.panelPreferences};
+    if (data.panelPreferences?.dockVersion !== 1) { preferences.position = null; preferences.dockVersion = 1; await savePreferences(); }
     render(); clamp(); await tick(); setInterval(tick, 250);
   })().catch(() => status('reload'));
 })();

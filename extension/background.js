@@ -22,6 +22,15 @@ async function offscreen() {
 async function send(tabId, message) {
   try { await chrome.tabs.sendMessage(tabId, message); } catch { /* Tab navigating. */ }
 }
+async function skipIfReady(s) {
+  // A retained verdict is for display; only a fresh qualifying run can skip.
+  if (session !== s || s.skipped || s.paused || !s.track?.enabled || !s.track.playing ||
+      !s.decision.tick(Date.now(), true).skip) return;
+  s.skipped = true;
+  await persistSession();
+  await send(s.tabId, {type: 'SKIP', id: s.track.id,
+    reason: 'Audio model: above 80% for 4 seconds, or three separate 3-second runs.'});
+}
 async function stop() {
   const old = session;
   session = null;
@@ -62,25 +71,32 @@ chrome.runtime.onMessage.addListener((message, sender, reply) => {
   if (message.target === 'audio') return;
   (async () => {
     await restored;
+    if (message.type === 'ANALYSIS_TOGGLE' && sender.tab?.id === session?.tabId) {
+      const s = session; s.paused = !s.paused;
+      s.epoch = crypto.randomUUID(); s.decision.reset(); s.evidence.reset(); s.skipped = false;
+      await chrome.runtime.sendMessage({target:'audio',type:'TRACK',epoch:s.epoch,
+        active:Boolean(s.track?.id && s.track.playing && !s.paused)});
+      await send(s.tabId,{type:'COUNTDOWN',elapsed:null});
+      await persistSession();
+    }
     if (message.type === 'TRACK' && sender.tab?.id === session?.tabId) {
       const s = session;
       const t = message.track;
-      if (s.track?.id !== t.id || s.track?.playing !== t.playing || s.track?.enabled !== t.enabled || s.track?.seekToken !== t.seekToken ||
+      if (s.track?.id !== t.id) s.modelVerdict = false;
+      if (s.track?.id !== t.id || s.track?.playing !== t.playing || s.track?.seekToken !== t.seekToken ||
           Math.abs((s.track?.position ?? 0) - t.position) > 2) {
         s.epoch = crypto.randomUUID(); s.decision.reset(); s.evidence.reset();
         s.skipped = false;
         await send(s.tabId, {type: 'COUNTDOWN', elapsed: null});
         await chrome.runtime.sendMessage({target: 'audio', type: 'TRACK', epoch: s.epoch,
-          active: Boolean(t.id && t.playing && t.enabled)});
+          active: Boolean(t.id && t.playing && !s.paused)});
       }
-      const ownershipChanged = s.track?.id !== t.id || s.track?.enabled !== t.enabled || s.track?.playing !== t.playing || s.track?.seekToken !== t.seekToken;
+      const ownershipChanged = s.track?.id !== t.id || s.track?.playing !== t.playing || s.track?.seekToken !== t.seekToken;
       s.track = t;
       if (ownershipChanged) await persistSession();
-      const state = s.decision.tick(Date.now(), t.playing && t.enabled);
-      if (state.skip && !s.skipped) {
-        s.skipped = true;
-        await send(s.tabId, {type: 'SKIP', id: t.id, reason: 'Ses modeli: YZ skoru 5 saniye boyunca eşik altına düşmedi.'});
-      }
+      s.decision.tick(Date.now(), t.playing);
+      await send(s.tabId, {type: 'MODEL_VERDICT', id: t.id, detected: Boolean(s.modelVerdict)});
+      await skipIfReady(s);
     }
     if (message.type === 'LEVELS' && sender.url === chrome.runtime.getURL('offscreen.html') && session && message.epoch === session.epoch) {
       await send(session.tabId, {type: 'LEVELS', left: Math.max(0, Math.min(1, Number(message.left) || 0)),
@@ -91,7 +107,7 @@ chrome.runtime.onMessage.addListener((message, sender, reply) => {
     }
     if (message.type === 'RESULT' && sender.url === chrome.runtime.getURL('offscreen.html')) {
       const s = session;
-      if (!s || message.epoch !== s.epoch || !s.track?.playing || !s.track.enabled || s.skipped) {
+      if (!s || s.paused || message.epoch !== s.epoch || !s.track?.playing) {
         reply({ok: true, ignored: true}); return;
       }
       if (message.error) {
@@ -109,21 +125,19 @@ chrome.runtime.onMessage.addListener((message, sender, reply) => {
           s.decision.sample(estimate.score, Date.now(), message.sampleTime);
           await send(s.tabId, {type: 'SCORE', probability: estimate.score, rawProbability: message.probability, seconds: message.seconds});
           const decision = s.decision.tick(Date.now(), true);
-          if (decision.skip) {
-            s.skipped = true;
-            await send(s.tabId, {type: 'SKIP', id: s.track.id,
-              reason: 'Five seconds above threshold, supported by disjoint-window evidence.'});
-          } else {
-            await send(s.tabId, {type: 'STATUS', code: 'listening'});
-            await send(s.tabId, {type: 'COUNTDOWN', elapsed: decision.remaining === null ? null : s.decision.seconds});
-          }
+          if (decision.skip) s.modelVerdict = true;
+          // User enabled model-based skipping; this is not verified provenance.
+          await send(s.tabId, {type: 'MODEL_VERDICT', id: s.track.id, detected: Boolean(s.modelVerdict)});
+          await send(s.tabId, {type: 'STATUS', code: 'listening'});
+          await send(s.tabId, {type: 'COUNTDOWN', elapsed: decision.remaining === null ? null : Math.min(4, s.decision.seconds), runs: s.decision.qualifyingRuns});
+          await skipIfReady(s);
         }
       }
     }
     if (message.type === 'RESULT') await persistSession();
     if (message.type === 'CAPTURE_ENDED' && sender.url === chrome.runtime.getURL('offscreen.html')) await stop();
-    if (message.type === 'HELLO') reply({capturing: sender.tab?.id === session?.tabId});
-    else reply({ok: true, capturing: Boolean(session && sender.tab?.id === session.tabId)});
+    if (message.type === 'HELLO') reply({capturing: sender.tab?.id === session?.tabId, paused: Boolean(session?.paused)});
+    else reply({ok: true, capturing: Boolean(session && sender.tab?.id === session.tabId), paused: Boolean(session?.paused)});
   })().catch(error => reply({error: error.message}));
   return true;
 });

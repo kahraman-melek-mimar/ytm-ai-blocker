@@ -13,6 +13,7 @@ async function analyze(data) {
     await report({epoch, error: 'Model cannot keep up', errorCode: 'modelBusy'});
     return;
   }
+  const requestEpoch = data.epoch;
   const request = crypto.randomUUID(); pending = request;
   const abort = new AbortController(); controller = abort;
   const timer = setTimeout(() => abort.abort(), 6000);
@@ -21,12 +22,21 @@ async function analyze(data) {
       method: 'POST', headers: {'Content-Type': 'application/octet-stream'},
       body: data.samples.buffer, signal: abort.signal});
     const result = await response.json();
-    if (!response.ok) { const error = new Error(result.error || `HTTP ${response.status}`); error.code = 'modelFailure'; throw error; }
+    if (!response.ok) {
+      const error = new Error(result.error || `HTTP ${response.status}`);
+      const codes = ['invalidScore', 'insufficientAudio', 'invalidAudio', 'modelBusy', 'modelFailure'];
+      const legacy = result.error === 'Model geçerli bir skor üretmedi.' ? 'invalidScore' :
+        result.error === 'Sessizlik: analiz için yeterli ses yok.' ? 'insufficientAudio' : null;
+      error.code = codes.includes(result.code) ? result.code : legacy || (response.status === 429 ? 'modelBusy' : 'modelFailure');
+      throw error;
+    }
     if (typeof result.probability !== 'number' || !Number.isFinite(result.probability) ||
-        result.probability < 0 || result.probability > 1) throw new Error('Geçersiz model çıktısı.');
-    if (active && data.epoch === epoch) await report({epoch, probability: result.probability, sampleTime: data.sampleTime, seconds: data.seconds});
+        result.probability < 0 || result.probability > 1) {
+      const error = new Error('Geçersiz model çıktısı.'); error.code = 'invalidScore'; throw error;
+    }
+    if (active && requestEpoch === epoch) await report({epoch: requestEpoch, probability: result.probability, sampleTime: data.sampleTime, seconds: data.seconds});
   } catch (error) {
-    if (active && data.epoch === epoch) await report({epoch,
+    if (active && requestEpoch === epoch && pending === request) await report({epoch: requestEpoch,
       error: error.message, errorCode: error.name === 'AbortError' ? 'timeout' : error instanceof TypeError ? 'fetchError' : (error.code || 'modelFailure')});
   } finally { clearTimeout(timer); if (pending === request) pending = null; }
 }

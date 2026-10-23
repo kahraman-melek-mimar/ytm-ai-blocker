@@ -10,5 +10,9 @@
     if (!id) return;
     if (settings.allowed[id]) delete settings.allowed[id]; else settings.allowed[id] = true;
   }
-  globalThis.YTMTrackPolicy = {isAllowed, isBlocked, block, toggleAllow};
+  function recordSkip(history, entry) {
+    if (!entry?.eventId || !entry.id || !Number.isFinite(entry.time)) return history;
+    return [entry, ...history.filter(item => item.eventId !== entry.eventId)].slice(0, 200);
+  }
+  globalThis.YTMTrackPolicy = {isAllowed, isBlocked, block, toggleAllow, recordSkip};
 })();

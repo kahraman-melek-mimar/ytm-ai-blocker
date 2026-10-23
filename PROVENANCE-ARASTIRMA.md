@@ -20,8 +20,11 @@ Başlangıç kaynağı: https://help.udio.com/en/
 
 Sekme yakalamasından alınan mono float32 PCM paketleri ses örnekleridir; özgün MP3/WAV dosyasının ID3 veya C2PA bloklarını içermez. Dolayısıyla Suno API’sine bu PCM’den yeniden oluşturulan WAV dosyasını göndermek özgün dosya kimliğini geri getirmez. Sesteki özel filigranı kontrol etmek için ilgili sağlayıcının gerçek çözücüsü gerekir. Modelin istatistiksel skoru dijital imza doğrulaması değildir.
 
-## v3.0.5 uygulaması
+## Canlı uygulama (v3.4.0)
 
-Şarkı kimliğiyle eşleşen oynatıcı açıklamasında Suno, Udio, Lyria/MusicFX üretim beyanları ve isim geçişleri ayrı gösterilir. Oynatıcı verisindeki disclosure/synthetic/provenance benzeri adlandırılmış alanlarda açık YZ beyanı varsa ayrı etiketlenir. Tüm sayfa, öneriler veya diğer şarkıların açıklamaları taranmaz. Özgün dosya C2PA doğrulanmadığı açıkça yazılır. Bu katman ses skorunu değiştirmez ve kendi başına otomatik atlatmaz; mevcut kesintisiz 5 saniye kuralı yalnızca ses modeline uygulanır. Platform etiketi şema/erişim koşullarına bağlıdır ve canlı pozitif örnekle doğrulama bekler.
+Şarkı kimliğiyle eşleşen oynatıcı açıklamasında Suno, Udio, Lyria/MusicFX üretim beyanları ve isim geçişleri ayrı gösterilir. Oynatıcı verisindeki disclosure/synthetic/provenance benzeri adlandırılmış alanlarda açık YZ beyanı varsa ayrı etiketlenir. Tüm sayfa, öneriler veya diğer şarkıların açıklamaları taranmaz. Özgün dosya C2PA doğrulanmadığı açıkça yazılır. Bu katman ses skorunu değiştirmez ve kendi başına otomatik atlatmaz; dört saniye veya üç ayrı üç saniye koşulu yalnızca ses modeline uygulanır. Platform etiketi şema/erişim koşullarına bağlıdır ve canlı pozitif örnekle doğrulama bekler.
 
 Hiçbir ses veya URL Suno/Google/Udio’ya otomatik gönderilmez. Ek dış servis izni yoktur. Sonraki gerçek C2PA doğrulama adımı, kullanıcının sağladığı özgün medya dosyasını yerel C2PA doğrulayıcıyla veya kullanıcının seçtiği Suno API gönderimiyle incelemek olabilir. Yerel doğrulamada imza ve güven zinciri denetlenmelidir; metinde Suno aramak yeterli değildir.
+
+
+Yerel dosyalar için tools/read_c2pa.py ile C2PA okuma/çıkarma aracı bulunur. Güncel güven listesi bağımsız olarak verilirse imza güveni de denetlenir; canlı PCM yoluna bağlanmamıştır.

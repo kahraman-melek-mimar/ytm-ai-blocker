@@ -57,7 +57,7 @@ test('background rejects old track results after navigation, pause and seek', as
   let epoch = audio.at(-1).epoch;
   const source = {url: 'chrome-extension://test/offscreen.html'};
   await deliver({type: 'RESULT', epoch, probability: .95}, source);
-  assert.ok(sent.some(m => m.type === 'SCORE_PENDING' && m.count === 1));
+  assert.ok(sent.some(m => m.type === 'SCORE' && m.probability === .95));
   assert.equal(sent.some(m => m.type === 'SKIP'), false);
   for (const change of [{id: 'two'}, {playing: false}, {playing: true, seekToken: 1}]) {
     Object.assign(track, change);
@@ -67,6 +67,57 @@ test('background rejects old track results after navigation, pause and seek', as
     assert.equal(sent.length, count);
     epoch = audio.at(-1).epoch;
   }
+  for (let sampleTime = 0; sampleTime <= 5000; sampleTime += 1000) {
+    await deliver({type: 'RESULT', epoch, probability: .95, sampleTime}, source);
+    assert.equal(sent.filter(m => m.type === 'SKIP').length, sampleTime >= 4000 ? 1 : 0);
+  }
+  assert.ok(sent.some(m => m.type === 'MODEL_VERDICT' && m.id === 'two' && m.detected));
+  const priorEpoch = epoch, audioCount = audio.length;
+  track.enabled = false;
+  await deliver({type: 'TRACK', track: {...track}}, {tab});
+  assert.equal(audio.length, audioCount); // Toggle must not reset audio or the epoch.
+  await deliver({type: 'RESULT', epoch: priorEpoch, probability: .37, sampleTime: 6000}, source);
+  assert.equal(sent.filter(m => m.type === 'SCORE').at(-1).probability, .37);
+  assert.equal(sent.filter(m => m.type === 'MODEL_VERDICT').at(-1).detected, true);
+  assert.equal(sent.filter(m => m.type === 'SKIP').length, 1);
+  assert.equal(sent.find(m => m.type === 'SKIP').id, 'two');
+  track.id = 'three';
+  await deliver({type: 'TRACK', track: {...track}}, {tab});
+  epoch = audio.at(-1).epoch;
+  assert.equal(audio.at(-1).active, true);
+  assert.equal(sent.filter(m => m.type === 'MODEL_VERDICT').at(-1).detected, false);
+  for (let t=0;t<=5000;t+=1000) await deliver({type: 'RESULT', epoch, probability: .96, sampleTime:t},source);
+  assert.equal(sent.filter(m=>m.type==='MODEL_VERDICT').at(-1).detected,true);
+  assert.equal(sent.filter(m=>m.type==='SKIP').length,1);
+  track.enabled = true;
+  await deliver({type:'TRACK',track:{...track}}, {tab});
+  assert.equal(sent.filter(m=>m.type==='SKIP').length,2);
+  assert.equal(sent.filter(m=>m.type==='SKIP').at(-1).id,'three');
+  await deliver({type:'RESULT',epoch,probability:.97,sampleTime:6000},source);
+  assert.equal(sent.filter(m=>m.type==='SKIP').length,2);
+  assert.equal(sent.filter(m=>m.type==='SCORE').at(-1).probability,.97);
+  // A retained model verdict after a low sample must not skip on re-enable.
+  track.id='four';track.enabled=false;
+  await deliver({type:'TRACK',track:{...track}}, {tab});epoch=audio.at(-1).epoch;
+  for(let t=0;t<=5000;t+=1000) await deliver({type:'RESULT',epoch,probability:.96,sampleTime:t},source);
+  await deliver({type:'RESULT',epoch,probability:.2,sampleTime:6000},source);
+  track.enabled=true;
+  await deliver({type:'TRACK',track:{...track}}, {tab});
+  assert.equal(sent.filter(m=>m.type==='SKIP').length,2);
+  const beforePause = epoch;
+  const paused = await deliver({type:'ANALYSIS_TOGGLE'}, {tab});
+  assert.equal(paused.paused,true); assert.equal(audio.at(-1).active,false);
+  const pausedEpoch=audio.at(-1).epoch, countBefore=sent.filter(m=>m.type==='SCORE').length;
+  await deliver({type:'LEVELS',epoch:pausedEpoch,left:.5,right:.1},source);
+  assert.equal(sent.filter(m=>m.type==='LEVELS').at(-1).left,.5);
+  assert.equal(sent.filter(m=>m.type==='LEVELS').at(-1).right,.1);
+  for(const old of [beforePause,pausedEpoch]) await deliver({type:'RESULT',epoch:old,probability:.99,sampleTime:7000},source);
+  assert.equal(sent.filter(m=>m.type==='SCORE').length,countBefore);
+  const resumedAnalysis=await deliver({type:'ANALYSIS_TOGGLE'}, {tab});
+  assert.equal(resumedAnalysis.paused,false); assert.equal(audio.at(-1).active,true);
+  epoch=audio.at(-1).epoch; assert.notEqual(epoch,pausedEpoch);
+  await deliver({type:'RESULT',epoch,probability:.4,sampleTime:4000},source);
+  assert.equal(sent.filter(m=>m.type==='SCORE').at(-1).probability,.4);
   await import('../extension/background.js?restart-test');
   const resumed = await deliver({type: 'TRACK', track: {...track}}, {tab});
   assert.equal(resumed.capturing, true);
