@@ -1,11 +1,12 @@
-# Known limitations / Bilinen sınırlar
+# V4 Beta limitations / Sınırlar
 
-YTM AI Blocker can make mistakes. It is not recommended for DJ or classical music. Model scores are not calibrated probabilities and cannot establish provenance. Genuine music can score high; generated music can score low. No measured genre-specific accuracy guarantee is provided.
-
-YTM AI Blocker hata yapabilir. DJ ve klasik müzik için önerilmez. Model skoru kalibre olasılık veya üretim kanıtı değildir. Özgün müzik yüksek, YZ müzik düşük skor alabilir. Tür bazında ölçülmüş doğruluk garantisi yoktur.
-
-The numerical guard corrects exact-zero denominators in two HPSS divisions of the pinned graph, without altering the source file or weights. Eight previously non-finite sample windows returned finite scores in local checks; eleven previously finite comparison windows were unchanged. Those are numerical regression checks, not detection benchmarks. Some recovered windows from user-designated human recordings scored high: fixing numerical failures does not fix false positives.
-
-Sayısal düzeltme, sabit grafikteki iki HPSS bölmesinde tam sıfır paydayı korur. Özgün dosya/ağırlıklar değiştirilmez. Önceden geçersiz olan sekiz örnek sonlu sonuç verdi; önceden geçerli on bir karşılaştırma örneği aynı kaldı. Bu, doğruluk testi değil sayısal regresyondur. Kullanıcının insan üretimi olarak belirttiği bazı kayıtlarda düzeltilen pencereler yüksek skor verdi; yanlış pozitif sorunu devam edebilir.
-
-The live production label is text evidence. C2PA reading is a separate optional local-file tool. SynthID is not decoded. C2PA metadata may not be available in a YouTube stream; absence does not mean human origin. Automatic skip history is local and based on an observed track change after a next-button click, not a server-confirmed playback audit.
+- Experimental AI-audio scoring can miss generated tracks and flag human recordings. Not recommended for DJ/classical music. / Hata yapabilir; DJ/klasik müzik için önerilmez.
+- A score is not a calibrated probability, a digital signature or proof of origin. Text disclosures/provider mentions are separate evidence; None does not mean human-made. Live C2PA/SynthID verification is not implemented.
+- No shared catalog, community voting, Deezer or ShazamKit integration is active in this Beta. Experimental catalog source is not an authenticated public backend.
+- Target: desktop Chrome/compatible Chromium 116+ on Windows/Linux/macOS. Live audio and GPU testing was on macOS Chrome; Windows/Linux have not been live validated. Safari and Firefox are not supported by this package.
+- WebGPU/model support varies with browser and hardware. CPU fallback can be too slow for continuous timing confirmation. The first GPU compilation may be slower than warm inference. A roughly 0.15-second local Chrome microbenchmark after correcting the runtime bundle is not a whole-product performance guarantee.
+- The four-second / three separate three-second decision requires fresh consecutive model results. Holding the previous high score onscreen is not counted as continuous detection. Gaps and invalid results reset continuity; no missing interval is assumed high.
+- YouTube playback/DOM changes, ads, unavailable next controls and capture restrictions can affect operation. First capture requires a toolbar gesture. Pause/seek/new track invalidates old results. Meters are digital RMS displays, not calibrated broadcast VU instruments.
+- Track allowance/block/history storage is local to this extension installation. V3/V4 test/production folders can have different extension IDs; preferences are not migrated automatically. Disable other copies on the same music page.
+- This is a GitHub ZIP loaded manually through Developer mode, not a desktop executable or Chrome Web Store installation. Keep the extracted directory. Updates are manual.
+- The packaged ArtifactNet model is CC BY-NC 4.0 with additional patent notices; commercial/patent rights are not granted. Application source has no separately selected permissive license. See THIRD_PARTY_NOTICES.md.

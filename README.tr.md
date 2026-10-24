@@ -1,50 +1,53 @@
-# YTM AI Blocker v3.4.0
+# YTM AI Blocker — V4 Beta
 
 [EN — English](README.md)
 
-YouTube Music için deneysel yerel ses skoru ve kişisel parça geçişi. by Kahraman MELEK®.
+YouTube Music için cihazda ses analizi, stereo metreler ve isteğe bağlı parça atlama. Kahraman MELEK®.
 
-**YTM AI Blocker hata yapabilir. DJ müziklerinde ve klasik müziklerde kullanılması önerilmez.** Özgün kayıtları YZ olarak işaretleyebilir; YZ kayıtlarını kaçırabilir. Skor, kalibre edilmiş olasılık veya üretim kanıtı değildir.
+| Ürün | Yerel sunucu gerekir mi? | İndir |
+|---|---|---|
+| **4.0.4 Beta — sunucusuz** | **Hayır.** Python veya terminal gerekmez | [Yüklemeye hazır ZIP](https://github.com/kahraman-melek-mimar/ytm-ai-blocker/releases/download/v4.0.4-beta.1/ytm-ai-blocker-4.0.4-beta.1-serverless.zip) |
+| **3.4.1 — sunuculu sürüm** | **Evet.** Python yardımcısı analiz boyunca açık kalmalıdır | [Sunuculu yayın](https://github.com/kahraman-melek-mimar/ytm-ai-blocker/releases/tag/v3.4.1) · [sunuculu kaynaklar](https://github.com/kahraman-melek-mimar/ytm-ai-blocker/tree/v3-server) |
 
-![Simüle girdili Türkçe önizleme](docs/panel-preview-tr.jpg)
+**Beta sürüm hata yapabilir. DJ ve klasik müzik için önerilmez.** Model skoru kesin YZ kararı veya üretim kanıtı değildir. İnsan yapımı kayıtlar yanlış işaretlenebilir, YZ kayıtları kaçırılabilir.
 
-## Kurulum ve başlatma (macOS)
+## İndir, aç ve Chrome'a yükle
 
-Chrome/Chromium 116+, Python 3.10+, ilk kurulum için internet bağlantısı ve analiz boyunca açık kalacak yerel Python yardımcısı gerekir.
+Masaüstü Chrome/uyumlu Chromium 116+ içindir. Aynı paket Windows, Linux ve macOS'u hedefler. Canlı ses/GPU denemesi macOS Chrome'da yapıldı; Windows ve Linux henüz canlı doğrulanmamış Beta hedefleridir.
 
-1. GitHub’da **Code → Download ZIP** ile indirin, arşivi açın ve `Kurulum.command` veya `Install.command` dosyasını bir kez çalıştırın. Bağımlılıklar ve model ayrıca indirilir.
-2. `Başlat.command` veya `Start.command` dosyasını açıp penceresini açık tutun. Sunucu yalnızca `127.0.0.1:5050` adresinde çalışır.
-3. `chrome://extensions` ekranında **Geliştirici modu**nu açın, **Paketlenmemiş öğe yükle** ile `extension` klasörünü seçin.
-4. YouTube Music’i açıp Chrome araç çubuğundaki eklenti simgesine tıklayın. İlk ses yakalama Chrome’un bu kullanıcı işlemini gerektirir.
-5. Panelden YZ analizini durdurup devam ettirin. Analiz dururken ses bağlantısı ve VU metreler çalışır. Yakalamayı tamamen bitirmek için eklenti simgesine tekrar tıklayın.
+1. Yukarıdaki **sunucusuz ZIP'i** indirin ve kalıcı bir klasöre açın. Bu klasörü kurulumdan sonra silmeyin.
+2. Chrome'da `chrome://extensions` sayfasını açın ve **Geliştirici modu** seçeneğini etkinleştirin.
+3. **Paketlenmemiş öğe yükle** düğmesine basıp ZIP'ten çıkan **extension** klasörünü seçin. Seçtiğiniz klasörde `manifest.json` olmalıdır.
+4. Eski V3/V4 test kopyasını kapatın. YouTube Music'i yenileyin ve müzik çalın.
+5. Chrome araç çubuğundaki **yapboz** simgesine, ardından **YTM AI Blocker … V4 Beta** adına tıklayın. İsterseniz raptiyeyle sabitleyin. İlk tıklama sekme sesini yakalamayı başlatır.
+6. Panelde **v4.0.4 Beta** görünmelidir. Yeni kurulumda **Otomatik atla kapalı** başlar; analiz ve metreler çalışır. İsterseniz panelden açın.
 
-Güncellemede eklentiyi yeniden yükleyin, YouTube Music’i yenileyin ve yakalamayı yeniden başlatın. Sunucu dosyaları değiştiyse yerel yardımcıyı da yeniden başlatın. Eklenti ve yardımcı aynı sürümden olmalıdır.
+Model ve çalışma dosyaları ZIP'te hazırdır. **Kullanıcı için Python, npm, terminal veya yerel sunucu kurulumu yoktur.** Bu paket çift tıklanan bir masaüstü uygulaması veya mağazadan tek tık kurulum değildir; Chrome'a klasör olarak yüklenir. Güncellemede yeni dosyaları aynı klasöre çıkarın, eklentiyi yeniden yükleyin ve YouTube Music'i yenileyin. GitHub'dan elle kurulum otomatik güncelleme sağlamaz.
 
-## Çalışma biçimi
+## Davranış
 
-- Panel başlangıçta sağ kenarda, dikey ortada açılır. Başlığından sürüklenebilir; başlık odaktayken ok tuşlarıyla taşınabilir. **Listeler → Konumu sıfırla** sağ-orta konumuna döndürür.
-- TR/EN seçimi, tam sayı yüzdeler, yeşil–sarı–kırmızı **YZ Metre**, çentikler ve yavaş azalan tepe işareti bulunur.
-- Sağ/sol ses gücü dBFS olarak ayrı ölçülür. VU metrelerde çentikler ve tepe çizgileri vardır; gösterge ölçeğinde %10 yeşil, %90 ve üzeri kırmızıdır. Bunlar yayın standardına göre kalibre edilmiş VU cihazları değildir.
-- Model dört saniyelik mono pencereleri her saniye değerlendirir. VU metreler için stereo kanallar ayrı tutulur.
-- Karar: skorun **kesintisiz dört saniye %80 üzerinde** kalması VEYA aynı parçada **üç ayrı yükselişin her birinin en az üç saniye %80 üzerinde** kalması. Tek yükseliş bir kez sayılır. %80 ve altı mevcut yükselişi bitirir; tamamlanan dönemler parça/arama/duraklatma, eksik/geçersiz örnek veya analizi yeniden başlatmayla sıfırlanana kadar korunur.
-- **Otomatik atla açık:** güncel koşulu sağlayan model kararı parçayı geçirir. **Kapalı:** analiz, metre ve karar gösterimi sürer; model otomatik geçiş yaptırmaz. İzin verilen parçalar otomatik geçilmez.
-- Parçalar tek tek engellenebilir veya izin verilebilir; kayıtlar **Listeler**den yönetilir. Modelin geçirdiği parçalar kendiliğinden kalıcı engellenmez.
-- **Otomatik geçilenler**, son 200 yerel kaydı parça adı, zaman, neden ve son skorla gösterir. Sonraki düğmesine tıklanıp parça değişimi görüldüğünde kayıt oluşur; kullanılamayan düğme kayıt oluşturmaz. Kayıtlar tek tek silinebilir.
-- Sol alttaki **!** simgesi üzerine gelince, odaklanınca veya tıklanınca uyarıları açar. Escape veya dışarı tıklamayla kapanır.
-- **by Kahraman MELEK®** GitHub öneri formunu açar. Gönderim kullanıcı tarafından yapılır; herkese açıktır ve GitHub hesabı gerektirir.
+- TR/EN, sürüklenebilir panel, sağda dikey ortalı başlangıç konumu.
+- Ayrı sağ/sol ses metreleri, tam sayılı YZ Metre, çentikler ve yavaş azalan tepe işaretleri.
+- Son dört saniyelik ses her saniye yeniden değerlendirilir. Desteklenirse WebGPU, aksi halde işlemci kullanılır. İlk hazırlık sonraki analizlerden uzun sürebilir.
+- Gerçek skor **%80'in üzerinde kesintisiz 4 saniye** veya **ayrı ayrı üç kez en az 3 saniye** olursa model süre kararı oluşur. Eksik/eski sonuçlar sürekliliği sıfırlar. Ekranda bekleyen eski yüksek skor sayaç süresi sayılmaz.
+- Otomatik atla kapalıyken analiz ve karar görünmeye devam eder. Analizi durdurunca stereo metreler ve ses bağlantısı devam eder. Parçaya verilen izin otomatik atlamayı engeller.
+- Parça engelleme/izin listeleri; en çok 200 yerel otomatik-geçiş geçmişi. Kanal bazında toplu engel yoktur.
+- **!** baloncuğu kullanım uyarılarını gösterir. İsim bağlantısı GitHub öneri formunu açar; gönderim kullanıcı tarafından yapılır ve herkese açıktır.
 
-## Üretim bilgisi ve gizlilik
+Yavaş işlemcide model saniyelik sonuç akışına yetişmeyebilir ve otomatik atlama için süre koşulu oluşmayabilir. GPU düzeltmesinden sonra yerel Chrome mikro ölçümünde yaklaşık 0,15 saniye görüldü; bu her cihaz veya parça için garanti değildir. [Sınırlar](docs/KNOWN-LIMITATIONS.md).
 
-Canlı **Üretim etiketi**, mevcut açıklamalardaki Suno/Udio gibi isimleri ve üretim beyanlarını okur. **Yok**, insan üretimi demek değildir. **Dijital iz: Doğrulanmadı** bilerek gösterilir: canlı C2PA/SynthID doğrulaması bağlı değildir. Sekmeden yakalanan PCM, özgün dosyanın C2PA metaverisini taşımaz.
+## Kaynak bilgisi ve gizlilik
 
-Canlı ses bellekte işlenir ve yalnızca yerel yardımcıya gönderilir. Eklenti yakalanan sesi diske kaydetmez veya dinleme verisini dışarı yüklemez. Tercihler, engeller, izinler ve geçiş geçmişi Chrome’un yerel deposunda kalır. Kurulum model/bağımlılık indirir; bu sağlayıcılara canlı ses gönderilmez. Öneri veya parça bağlantısı seçilen web sitesini açar.
+Üretim etiketi okunabilir beyan/sağlayıcı isimlerinden gelir. **Yok**, insan yapımı anlamına gelmez. Canlı C2PA/SynthID doğrulaması yoktur; dijital iz satırı doğrulanmadı olarak kalır. **Ortak veritabanı ve topluluk oylaması bu Beta'ya bağlı değildir.**
 
-İsteğe bağlı geliştirici aracı `tools/read_c2pa.py`, açıkça verilen yerel dosyaların manifestini okur/çıkarır. Ayrı bağımlılığı `python -m pip install -r tools/requirements-c2pa.txt` ile kurulabilir. Canlı otomatik geçişe bağlı değildir. Uzak manifest ve OCSP sorguları kapalıdır; `--trust-anchors` için bağımsız olarak edinilmiş yerel C2PA güven listesi kullanılmalıdır. Manifest bulunması, güvenilir imza ve YZ üretim beyanı ayrı sonuçlardır.
+Ses cihaz belleğinde işlenir; analiz için dışarıya gönderilmez veya ses dosyası olarak kaydedilmez. Model ve çalışma dosyaları eklenti paketinden yüklenir. Tercihler, parça listeleri ve geçmiş yerel Chrome alanında tutulur. Dinleme geçmişi veya oylar yüklenmez. Site izni yalnızca YouTube Music içindir. Geri bildirim/parça bağlantıları kullanıldığında ilgili site açılır. [Gizlilik](PRIVACY.md).
 
-## Doğrulama ve sınırlar
+## Geliştirici ve lisans
 
-NumPy kurulduktan sonra `npm test` ve `python -m unittest discover -s tests -p 'test_*.py'` çalıştırılabilir. `python tools/build_release.py`, model/ortam/özel ses/analiz raporu/kişisel ayar içermeyen kaynak ve eklenti paketleri üretir. Görseller simüle önizlemedir; doğruluk sonucu değildir.
+Kullanıcılar yalnızca ZIP'i yükler. Geliştirici kontrolleri: `npm ci`, `npm test`, `python3 -m unittest discover -s tests -p 'test_*.py'`, `npm run build`.
 
-Yardımcı, sabit ArtifactNet grafiğindeki iki HPSS bölmesi için sıfır payda koruması içeren ayrı yerel kopya üretir. Özgün grafik ve ağırlıklar korunur. Tekrarlanan sayısal hata düzeltilmiştir; bu, sınıflandırma doğruluğunun kanıtı değildir. [Bilinen sınırlar](docs/KNOWN-LIMITATIONS.md).
+`backend/` ve katalog modülleri yerel geliştirme temelidir; yayımlanmış veya kimlik doğrulamalı bir oy hizmeti değildir ve eklentinin çalışması için gerekmez.
 
-Model ayrıca **CC BY-NC 4.0** lisansı ve sahibinin ek bildirimlerine tabidir. Kurulumda indirilir; depoya dahil değildir. [Üçüncü taraf bildirimleri](THIRD_PARTY_NOTICES.md). Chrome Web Store’da yayımlandığı iddia edilmez.
+ArtifactNet v9.4 (intrect / Heewon Oh) **CC BY-NC 4.0** ve model sahibinin ek patent bildirimleriyle paketlenmiştir. Ağırlıklar değişmedi; iki sıfır payda için grafikte sayısal koruma vardır. Bu düzeltme doğruluk garantisi değildir. Ticari veya patent kullanım hakkı verilmez. ONNX Runtime Web 1.30.0 MIT lisanslıdır. [Üçüncü taraf bildirimleri](THIRD_PARTY_NOTICES.md). Uygulama kaynakları için ayrıca serbest kullanım lisansı seçilmedi; deponun açık olması ek lisans hakkı sağlamaz.
+
+Yayın GitHub üzerindedir; Chrome Web Store yayını yapılmadı.

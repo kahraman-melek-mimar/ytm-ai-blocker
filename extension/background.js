@@ -3,9 +3,11 @@ import {Evidence} from './evidence.mjs';
 let session = null;
 let operation = false;
 let creating;
+let startupError = null;
 // In-memory objects are a cache; capture ownership and decision evidence survive a worker restart.
 const restored = (async () => {
-  const {captureSession} = await chrome.storage.session.get('captureSession');
+  const {captureSession, startupError: savedError} = await chrome.storage.session.get(['captureSession','startupError']);
+  startupError = savedError || null;
   if (!captureSession || !await chrome.offscreen.hasDocument()) return;
   session = {...captureSession, decision: Object.assign(new Decision(), captureSession.decision),
     evidence: Object.assign(new Evidence(), captureSession.evidence || {})};
@@ -37,6 +39,7 @@ async function stop() {
   await persistSession();
   if (await chrome.offscreen.hasDocument()) {
     await chrome.runtime.sendMessage({target: 'audio', type: 'STOP'}).catch(() => {});
+    await chrome.offscreen.closeDocument();
   }
   if (old) await send(old.tabId, {type: 'STATUS', code: 'captureStopped'});
   await chrome.action.setBadgeText({text: ''});
@@ -44,26 +47,36 @@ async function stop() {
 chrome.action.onClicked.addListener(async tab => {
   if (operation) return;
   operation = true;
+  let stage = 'offscreen';
   try {
     await restored;
+    startupError = null;
+    await chrome.storage.session.set({startupError:null});
     if (session?.tabId === tab.id) { await stop(); return; }
     if (!tab.url?.startsWith('https://music.youtube.com/')) {
       await chrome.action.setBadgeText({text: 'YTM'}); return;
     }
     await stop();
     await offscreen();
+    stage = 'tabCapture';
     const streamId = await chrome.tabCapture.getMediaStreamId({targetTabId: tab.id});
     session = {tabId: tab.id, track: null, epoch: crypto.randomUUID(), decision: new Decision(), evidence: new Evidence()};
+    stage = 'audioStart';
     const result = await chrome.runtime.sendMessage({target: 'audio', type: 'START', streamId});
     if (!result?.ok) throw new Error(result?.error || 'Ses yakalanamadı.');
     await persistSession();
+    await chrome.action.setTitle({title:'YTM AI Blocker V4 TEST'});
     await chrome.action.setBadgeText({text: 'ON'});
     await chrome.action.setBadgeBackgroundColor({color: '#127d68'});
     await send(tab.id, {type: 'STATUS', code: 'captureStarted'});
   } catch (error) {
     const id = tab.id;
-    await stop();
-    await send(id, {type: 'STATUS', code: 'captureError', detail: error.message});
+    try { await stop(); } catch { session = null; }
+    startupError = {tabId:id, stage, detail:`${stage}: ${error.message}`};
+    await chrome.storage.session.set({startupError});
+    console.error('V4 capture start failed', startupError.detail);
+    await chrome.action.setTitle({title:startupError.detail});
+    await send(id, {type: 'STATUS', code: 'captureError', detail: startupError.detail});
     await chrome.action.setBadgeText({text: '!'});
   } finally { operation = false; }
 });
@@ -128,16 +141,16 @@ chrome.runtime.onMessage.addListener((message, sender, reply) => {
           if (decision.skip) s.modelVerdict = true;
           // User enabled model-based skipping; this is not verified provenance.
           await send(s.tabId, {type: 'MODEL_VERDICT', id: s.track.id, detected: Boolean(s.modelVerdict)});
-          await send(s.tabId, {type: 'STATUS', code: 'listening'});
           await send(s.tabId, {type: 'COUNTDOWN', elapsed: decision.remaining === null ? null : Math.min(4, s.decision.seconds), runs: s.decision.qualifyingRuns});
+          if (message.inferenceMs > 1500) await send(s.tabId, {type:'STATUS',code:'slowAnalysis',values:{duration:(message.inferenceMs/1000).toFixed(1)},detail:`${message.backend || 'CPU'} · ${message.inferenceMs} ms`});
           await skipIfReady(s);
         }
       }
     }
     if (message.type === 'RESULT') await persistSession();
     if (message.type === 'CAPTURE_ENDED' && sender.url === chrome.runtime.getURL('offscreen.html')) await stop();
-    if (message.type === 'HELLO') reply({capturing: sender.tab?.id === session?.tabId, paused: Boolean(session?.paused)});
-    else reply({ok: true, capturing: Boolean(session && sender.tab?.id === session.tabId), paused: Boolean(session?.paused)});
+    if (message.type === 'HELLO') reply({capturing: sender.tab?.id === session?.tabId, paused: Boolean(session?.paused), startupError:sender.tab?.id === startupError?.tabId ? startupError.detail : null});
+    else reply({ok: true, capturing: Boolean(session && sender.tab?.id === session.tabId), paused: Boolean(session?.paused), startupError:sender.tab?.id === startupError?.tabId ? startupError.detail : null});
   })().catch(error => reply({error: error.message}));
   return true;
 });

@@ -1,34 +1,42 @@
-# Chrome Web Store draft — YTM AI Blocker v3.4.0
+# Chrome Web Store metadata — V4 Beta
 
-Updated 2026-10-23. This document is preparation only; the extension has not been submitted to the Chrome Web Store.
+Last updated: 2026-10-25. Distribution: public GitHub Beta. **Not submitted to Chrome Web Store.**
 
-## Listing
+## Listing draft
 
-Name: YTM AI Blocker by Kahraman MELEK®
+Name: YTM AI Blocker by Kahraman MELEK® V4 Beta (TR/EN localized messages).
+Short description: Local AI audio analysis, stereo level meters and track blocking for YouTube Music.
+Category: Productivity (draft). Single purpose: review and optionally skip suspected AI-generated tracks on YouTube Music. Languages: English and Turkish.
+Description: README.md / README.tr.md document current behavior, setup and limits. No exact AI-origin guarantee, live watermark verification or community database is claimed.
 
-Short description: Local AI audio estimates, stereo meters and personal track skipping for YouTube Music. TR/EN.
+## Graphics
 
-Purpose: Analyze the user-invoked YouTube Music tab locally, display advisory AI scores and skip individual tracks under user-selected controls.
-
-Explicit limitations: YTM AI Blocker can make mistakes. Not recommended for DJ or classical music. No reliable AI-origin guarantee. Live C2PA/SynthID verification is not integrated.
+Store icon and current screenshots pending. Manifest does not reference missing icons. This GitHub release is not a store submission.
 
 ## Permissions
 
-| Permission | Reason |
+| Permission | Justification |
 |---|---|
-| storage | Local preferences, track blocks/allowances and last 200 automatic-skip records. |
-| tabCapture | User-invoked capture of the YouTube Music tab audio. |
-| offscreen | Audio capture, stereo metering and communication with the local helper. |
-| activeTab | Temporary access associated with the extension toolbar action. |
-| https://music.youtube.com/* | Read current player state and display the panel. |
-| http://127.0.0.1:5050/* | Send transient PCM windows only to the user's local inference helper. |
+| storage | Local preferences, per-track lists, automatic-skip history and session state |
+| tabCapture | User-initiated audio capture from YouTube Music |
+| offscreen | Audio context and collection while the music page plays |
+| activeTab | Access to the selected music tab following the toolbar action |
+| https://music.youtube.com/* | Panel, playback control and current-track text evidence |
 
-## Privacy and external links
+No localhost permission in V4. Packaged JS/WASM runs with self + wasm-unsafe-eval. COOP/COEP are not enabled; one-thread CPU fallback and optional WebGPU are used.
 
-Live audio is transient and is not saved by the extension. No analytics or third-party listening-data upload. Local storage holds settings, video IDs/titles for blocks/allowances, and up to 200 automatic-skip records (track ID/title, timestamp, model score, reason). Users can remove list/history entries. Setup downloads dependencies and the separately licensed model. Runtime audio is not sent to those providers.
+## Privacy
 
-The author credit opens a GitHub issue form, submitted manually by the user. Track links open YouTube Music. The separate optional local-file C2PA developer tool reads explicitly provided files; remote manifests and OCSP fetching are disabled. It is not connected to live auto-skip and does not upload audio.
+PRIVACY.md describes local in-memory audio processing, local lists/history and manual external links. No telemetry, account login, remote inference, audio upload, catalog sync or voting endpoint is active. Data is not sold or used for unrelated/credit purposes. A live policy URL and final dashboard disclosures must be completed before a future store submission.
 
-## Remaining store preparation
+## Distribution/developer
 
-Store icons/assets, a hosted privacy-policy URL and the final Developer Dashboard disclosures still require preparation before any store submission. GitHub publication does not mean Chrome Web Store approval. The model's non-commercial license and owner notices remain applicable; see THIRD_PARTY_NOTICES.md.
+GitHub public prerelease v4.0.4-beta.1. Publisher: Kahraman MELEK. Support: https://github.com/kahraman-melek-mimar/ytm-ai-blocker/issues . Store contact email/graphics remain pending; do not invent them.
+
+## Version history
+
+4.0.4 Beta — 2026-10-25 — serverless packaged model/runtime, WebGPU assets corrected, CPU fallback, preserved timing rules, separate V3 server edition. GitHub Beta, not store-published.
+
+## Review notes
+
+False positives/misses, DJ/classical limits and slow-CPU continuity limits remain. Live audio/GPU testing on macOS Chrome only; Windows/Linux are unverified targets. Model CC BY-NC 4.0 and owner patent notices apply. No commercial/patent rights granted. See THIRD_PARTY_NOTICES.md. No store rejection history.

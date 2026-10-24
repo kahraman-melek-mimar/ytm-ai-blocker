@@ -1,23 +1,12 @@
-# Third-party notices / Üçüncü taraf bildirimleri
+# V4 Beta — Third-party notices / Üçüncü taraf bildirimleri
 
-## Acoustic classifier / Ses modeli
+ArtifactNet v9.4 by intrect (Heewon Oh): https://huggingface.co/intrect/artifactnet
+Revision: e915f0d. The model owner publishes this inference build under CC BY-NC 4.0 with additional patent notices. See models/MODEL-CARD.md and https://creativecommons.org/licenses/by-nc/4.0/ . Commercial deployment requires appropriate rights from the owner; this package grants no additional rights.
 
-ArtifactNet v9.4, intrect (Heewon Oh). Model repository: https://huggingface.co/intrect/artifactnet
-Pinned revision used by installer: `e915f0d`. Files: `artifactnet_v94_full.onnx` and its external `.data` file.
+Unlike the published V3 source package, this serverless Beta distribution includes the model graph and external weights to run without Python or a local HTTP server. It is distributed on GitHub for non-commercial use/evaluation; no Chrome Web Store publication is claimed.
 
-The model owner publishes this inference build under **CC BY-NC 4.0**, with additional patent notices stated on its model card. Model weights are not included in this source repository or release artifacts. The installer downloads them from their owner. This application does not relicense them. Obtain appropriate rights from the owner before commercial deployment.
+The derived artifactnet_v94_zero_guard.onnx protects exactly zero denominators in two HPSS divisions. Source weights are unchanged. Original graph SHA256 a923b53899fbb01fcf4436cc5e1837628516de6044c9f238b31b4b02ed601a19. The modification is not endorsed by the model author.
 
-Model **CC BY-NC 4.0** kapsamında yayımlanmıştır; model kartında ayrıca patent bildirimleri bulunur. Kaynak depo ve dağıtım paketleri model ağırlıklarını içermez. Kurulum bunları model sahibinden indirir. Bu uygulama modelin lisansını değiştirmez.
+ONNX Runtime Web 1.30.0, Microsoft, MIT License: vendor/ONNX-RUNTIME-LICENSE.txt. Runtime JavaScript and WebAssembly assets are bundled locally.
 
-## Runtime packages
-
-NumPy, ONNX Runtime and huggingface-hub are installed separately from their package distributions; their licenses remain applicable. No runtime binaries are bundled into the source release.
-
-## Application source
-
-No permissive open-source license has been selected for the application source. Public visibility alone is not an additional license grant. This notice does not change third-party licenses.
-
-Uygulama kodu için henüz serbest bir açık kaynak lisansı seçilmedi. Deponun herkese açık olması ek lisans izni anlamına gelmez. Bu bildirim üçüncü taraf lisanslarını değiştirmez.
-
-
-Local numerical modification (v3.3.0): server/model_numerics.py derives artifactnet_v94_zero_guard.onnx from the pinned ArtifactNet graph. It guards exactly zero denominators in two HPSS divisions, without changing source weights or source graph. Original model licensing remains applicable; no model binaries are distributed. This derivative is not endorsed by the upstream author.
+Application source license has not yet been selected. Public visibility of the V3 repository is not an additional license grant. This Beta package does not change third-party licensing.

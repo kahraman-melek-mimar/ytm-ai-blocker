@@ -1,2 +1,0 @@
-# Optional local-file provenance tool; not used by live playback.
-c2pa-python==0.38.1

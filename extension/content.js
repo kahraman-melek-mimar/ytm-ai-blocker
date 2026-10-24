@@ -1,7 +1,7 @@
 (() => {
   if (document.getElementById('ytm-ai-blocker')) return;
-  const VERSION = '3.4.0';
-  let settings = {enabled: true, blocked: {}, allowed: {}};
+  const VERSION = '4.0.4 Beta';
+  let settings = {enabled: false, blocked: {}, allowed: {}};
   let preferences = {language: navigator.language?.toLowerCase().startsWith('tr') ? 'tr' : 'en', position: null, dockVersion: 1};
   let current = null, lastSkipped = '', seekToken = 0, lastScoreAt = 0, lastLevelAt = 0;
   let skipHistory = [], pendingSkip = null;
@@ -21,7 +21,7 @@
     <div class="ai" id="ai" role="meter" aria-valuemin="0" aria-valuemax="100" aria-valuetext="—"><div class="spectrum" aria-hidden="true"></div><svg id="dial-ticks" viewBox="0 0 158 158" aria-hidden="true"></svg><div id="peak" aria-hidden="true" hidden></div><div class="readout"><small id="ai-label"></small><div id="score">—</div><div id="age"></div></div></div>
     <div class="channel"><span id="right-label"></span><div class="vu-scale"><svg class="vu-ticks" id="right-ticks" viewBox="0 0 30 112" aria-hidden="true"></svg><div class="well" role="meter" aria-valuemin="-60" aria-valuemax="0" aria-valuenow="-60" id="right-meter"><div class="fill" id="right-fill"></div><div class="vu-peak" id="right-peak" aria-hidden="true"></div></div></div><span class="db" id="right-db">−∞</span></div></div>
     <div id="status" role="status" aria-live="polite"></div><div id="countdown-slot"><progress id="countdown" hidden max="4" value="0"></progress></div>
-    <div id="decision-basis"><div id="model-verdict"></div><div id="digital-proof"></div></div><div class="controls"><button id="analysis-toggle" type="button"></button><label class="switch" for="enabled"><span id="auto-label"></span><input id="enabled" type="checkbox" checked></label><div class="actions"><button id="allow"></button><button id="block"></button></div></div>
+    <div id="decision-basis"><div id="model-verdict"></div><div id="digital-proof"></div></div><div class="controls"><button id="analysis-toggle" type="button"></button><label class="switch" for="enabled"><span id="auto-label"></span><input id="enabled" type="checkbox"></label><div class="actions"><button id="allow"></button><button id="block"></button></div></div>
     <footer><span id="signature"></span><button id="lists"></button></footer><div class="brand"><button id="warnings-button" type="button" aria-describedby="warnings-popover" aria-expanded="false" aria-controls="warnings-popover">!</button><span id="dot"></span><a id="feedback" href="https://github.com/kahraman-melek-mimar/ytm-ai-blocker/issues/new" target="_blank" rel="noopener noreferrer">by Kahraman MELEK®</a></div>
     <div id="warnings-popover" popover="auto" role="tooltip"><strong id="warnings-title"></strong><ul><li id="warning-error"></li><li id="warning-dj"></li><li id="warning-classical"></li></ul></div>
     <dialog id="manager"><h2 id="list-title"></h2><div id="list"></div><div class="dialog-actions"><button id="reset-position"></button><button id="close"></button></div></dialog>`;
@@ -53,7 +53,7 @@
     if (code === 'listening') {
       code = 'countdown'; values = {elapsed: YTMI18n.formatNumber(preferences.language, counterValues.elapsed), runs: counterValues.runs};
     }
-    messageState = {code, values}; const text = tr(code, values);
+    messageState = {code, values}; const text = tr(code, values) + (values.detail ? ` · ${values.detail}` : '');
     if (el('status').textContent !== text) el('status').textContent = text;
   }
   async function saveSettings() { await chrome.storage.local.set({settings}); }
@@ -244,7 +244,7 @@
       modelVerdict = Boolean(message.detected); renderVerdict();
     }
     if (message.type === 'STATUS') {
-      if (message.code) status(message.code, message.values);
+      if (message.code) status(message.code, {...message.values, ...(message.code === 'captureError' ? {detail:message.detail} : {})});
       else status('listening');
       el('status').title = message.detail || message.text || '';
     }
@@ -297,7 +297,8 @@
       if (analysisPaused !== wasPaused) { scoreView.reset(); lastScoreAt = 0; renderScore(); }
       capture = Boolean(response?.capturing); renderCapture(); el('dot').classList.toggle('on', capture);
       el('dot').title = tr(capture ? 'captureOn' : 'captureOff');
-      if (!capture) status('start');
+      if (!capture && response?.startupError) { status('captureError', {detail:response.startupError}); el('status').title = response.startupError; }
+      else if (!capture) status('start');
       else if (analysisPaused) { status('analysisPaused'); el('countdown').hidden = true; }
       else if (!track.id) status('noTrack');
       else if (!track.playing) status('paused');
