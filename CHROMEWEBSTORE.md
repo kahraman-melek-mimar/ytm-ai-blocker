@@ -32,3 +32,6 @@ The author credit opens a GitHub issue form, submitted manually by the user. Tra
 ## Remaining store preparation
 
 Store icons/assets, a hosted privacy-policy URL and the final Developer Dashboard disclosures still require preparation before any store submission. GitHub publication does not mean Chrome Web Store approval. The model's non-commercial license and owner notices remain applicable; see THIRD_PARTY_NOTICES.md.
+
+
+2026-10-25: v3.4.1 Local Server Edition. Public GitHub server edition, separate from V4 Beta. Requires Python and a running loopback helper for audio analysis. Store submission not performed.

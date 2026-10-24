@@ -19,7 +19,7 @@ for folder, suffixes in [('extension', {'.js', '.mjs', '.json', '.html', '.css'}
                          ('server', {'.py', '.txt'}), ('tests', {'.py', '.mjs', '.json'}),
                          ('docs', {'.jpg', '.md'}), ('.github', {'.yml'})]:
     for file in (ROOT / folder).rglob('*'):
-        if folder == 'docs' and file.name not in {'panel-preview-tr.jpg', 'panel-preview-en.jpg', 'KNOWN-LIMITATIONS.md'}: continue
+        if folder == 'docs' and file.name not in {'panel-preview-tr.jpg', 'panel-preview-en.jpg', 'KNOWN-LIMITATIONS.md', 'SERVER-INSTALL.md'}: continue
         if file.is_file() and file.suffix in suffixes and 'models' not in file.parts and '__pycache__' not in file.parts:
             files.append(file)
 files.append(ROOT / 'tools/build_release.py')

@@ -1,4 +1,8 @@
-# YTM AI Blocker v3.4.0
+# YTM AI Blocker v3.4.1 — Sunuculu Sürüm
+
+**Bu ürün yerel Python sunucusu gerektirir.** Ses analizi sırasında `127.0.0.1:5050` üzerinde çalışan yardımcı sunucu açık kalmalıdır. Tek başına eklentiyi yüklemek yeterli değildir. Sunucusuz ürün için [V4 Beta](https://github.com/kahraman-melek-mimar/ytm-ai-blocker/releases/tag/v4.0.4-beta.1) sürümünü seçin.
+
+[Windows / Linux / macOS sunuculu kurulum rehberi](docs/SERVER-INSTALL.md)
 
 [EN — English](README.md)
 

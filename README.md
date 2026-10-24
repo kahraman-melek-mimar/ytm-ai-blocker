@@ -1,4 +1,8 @@
-# YTM AI Blocker v3.4.0
+# YTM AI Blocker v3.4.1 — Local Server Edition
+
+**This edition requires a local Python server.** Keep the helper running at `127.0.0.1:5050` while analyzing audio. Installing the extension alone is insufficient. For the server-free edition, choose [V4 Beta](https://github.com/kahraman-melek-mimar/ytm-ai-blocker/releases/tag/v4.0.4-beta.1).
+
+[Windows / Linux / macOS server setup](docs/SERVER-INSTALL.md)
 
 [TR — Türkçe](README.tr.md)
 

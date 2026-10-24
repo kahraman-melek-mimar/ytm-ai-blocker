@@ -1,6 +1,6 @@
 (() => {
   if (document.getElementById('ytm-ai-blocker')) return;
-  const VERSION = '3.4.0';
+  const VERSION = '3.4.1 · SERVER';
   let settings = {enabled: true, blocked: {}, allowed: {}};
   let preferences = {language: navigator.language?.toLowerCase().startsWith('tr') ? 'tr' : 'en', position: null, dockVersion: 1};
   let current = null, lastSkipped = '', seekToken = 0, lastScoreAt = 0, lastLevelAt = 0;
