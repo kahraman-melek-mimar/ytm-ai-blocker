@@ -13,3 +13,5 @@ Local test build 4.0.5 Beta: VU readouts include dBFS in both channels, includin
 Local 4.0.6 Beta adds an optional offline Python DSP tool. Synthetic 50 Hz AM recovery, stereo inversion power preservation and silence are checked by --self-test. The tool is exercised against six local recordings. The extension model and skip rules are unchanged. No Python server or live Python integration is introduced. Research recordings and trained pilot artifacts remain excluded from release archives.
 
 Published 4.0.9 Beta preparation: 53 JavaScript + 5 Python checks passed. Windows and macOS packages include platform launchers and a bilingual local setup guide. Launchers open Chrome/guide; first Load unpacked remains manual. macOS launcher shell syntax verified; Windows execution is not live-tested. Local community-service deployments, credentials, listening data and pilot models are excluded.
+
+4.0.11 Beta: 63 JS regression checks passed, including observed skip acknowledgment, bounded retry eligibility and actual overlapping-window coverage at a 1.9-second inference cadence. Stale or missing audio does not advance timing. Windows live testing remains in progress.

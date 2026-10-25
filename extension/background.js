@@ -11,6 +11,7 @@ const restored = (async () => {
   if (!captureSession || !await chrome.offscreen.hasDocument()) return;
   session = {...captureSession, decision: Object.assign(new Decision(), captureSession.decision),
     evidence: Object.assign(new Evidence(), captureSession.evidence || {})};
+  session.skipPending=false; session.skipAttempts=0; session.lastSkipAttempt=0; session.skipped=false;
 })();
 async function persistSession() {
   await chrome.storage.session.set({captureSession: session ? {...session, decision: {...session.decision}, evidence: {...session.evidence}} : null});
@@ -28,10 +29,19 @@ async function skipIfReady(s) {
   // A retained verdict is for display; only a fresh qualifying run can skip.
   if (session !== s || s.skipped || s.paused || !s.track?.enabled || !s.track.playing ||
       !s.decision.tick(Date.now(), true).skip) return;
-  s.skipped = true;
-  await persistSession();
-  await send(s.tabId, {type: 'SKIP', id: s.track.id,
-    reason: 'Audio model: above 80% for 4 seconds, or three separate 3-second runs.'});
+  if (s.skipPending || (s.lastSkipAttempt && Date.now()-s.lastSkipAttempt<1500)) return;
+  if ((s.skipAttempts || 0)>=3) { await send(s.tabId,{type:'STATUS',code:'nextFailed'}); return; }
+  const id=s.track.id, epoch=s.epoch;
+  s.skipPending=true; s.lastSkipAttempt=Date.now(); s.skipAttempts=(s.skipAttempts || 0)+1;
+  try {
+    const result=await chrome.tabs.sendMessage(s.tabId,{type:'SKIP',id,
+      reason:'Audio model timing rule met; waiting for track change.'});
+    if (session===s && s.epoch===epoch && s.track?.id===id) {
+      s.skipped=result?.ok===true;
+      if (!s.skipped) await send(s.tabId,{type:'STATUS',code:result?.reason==='unavailable'?'nextUnavailable':'nextFailed'});
+    }
+  } catch { if(session===s && s.epoch===epoch) await send(s.tabId,{type:'STATUS',code:'nextFailed'}); }
+  finally {if(session===s && s.epoch===epoch) s.skipPending=false; await persistSession();}
 }
 async function stop() {
   const old = session;
@@ -86,7 +96,7 @@ chrome.runtime.onMessage.addListener((message, sender, reply) => {
     await restored;
     if (message.type === 'ANALYSIS_TOGGLE' && sender.tab?.id === session?.tabId) {
       const s = session; s.paused = !s.paused;
-      s.epoch = crypto.randomUUID(); s.decision.reset(); s.evidence.reset(); s.skipped = false;
+      s.epoch = crypto.randomUUID(); s.decision.reset(); s.evidence.reset(); s.skipped = false; s.skipPending=false; s.skipAttempts=0; s.lastSkipAttempt=0;
       await chrome.runtime.sendMessage({target:'audio',type:'TRACK',epoch:s.epoch,
         active:Boolean(s.track?.id && s.track.playing && !s.paused)});
       await send(s.tabId,{type:'COUNTDOWN',elapsed:null});
@@ -99,7 +109,7 @@ chrome.runtime.onMessage.addListener((message, sender, reply) => {
       if (s.track?.id !== t.id || s.track?.playing !== t.playing || s.track?.seekToken !== t.seekToken ||
           Math.abs((s.track?.position ?? 0) - t.position) > 2) {
         s.epoch = crypto.randomUUID(); s.decision.reset(); s.evidence.reset();
-        s.skipped = false;
+        s.skipped = false; s.skipPending=false; s.skipAttempts=0; s.lastSkipAttempt=0;
         await send(s.tabId, {type: 'COUNTDOWN', elapsed: null});
         await chrome.runtime.sendMessage({target: 'audio', type: 'TRACK', epoch: s.epoch,
           active: Boolean(t.id && t.playing && !s.paused)});
@@ -135,7 +145,7 @@ chrome.runtime.onMessage.addListener((message, sender, reply) => {
           await send(s.tabId, {type: 'SCORE_PENDING', count: estimate.count});
           await send(s.tabId, {type: 'COUNTDOWN', elapsed: null});
         } else {
-          s.decision.sample(estimate.score, Date.now(), message.sampleTime);
+          s.decision.sample(estimate.score, Date.now(), message.sampleTime, message.windowStart);
           await send(s.tabId, {type: 'SCORE', probability: estimate.score, rawProbability: message.probability, seconds: message.seconds});
           const decision = s.decision.tick(Date.now(), true);
           if (decision.skip) s.modelVerdict = true;

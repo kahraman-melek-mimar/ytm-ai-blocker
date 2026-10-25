@@ -1,6 +1,6 @@
 (() => {
   if (document.getElementById('ytm-ai-blocker')) return;
-  const VERSION = '4.0.9 Beta';
+  const VERSION = '4.0.11 Beta';
   let settings = {enabled: false, blocked: {}, allowed: {}};
   let preferences = {language: navigator.language?.toLowerCase().startsWith('tr') ? 'tr' : 'en', position: null, dockVersion: 1};
   let current = null, lastSkipped = '', seekToken = 0, lastScoreAt = 0, lastLevelAt = 0;
@@ -50,7 +50,7 @@
   }
 
   function status(code, values = {}) {
-    if (code === 'listening') {
+    if (code === 'listening' || code === 'slowAnalysis') {
       code = 'countdown'; values = {elapsed: YTMI18n.formatNumber(preferences.language, counterValues.elapsed), runs: counterValues.runs};
     }
     messageState = {code, values}; const text = tr(code, values) + (values.detail ? ` · ${values.detail}` : '');
@@ -178,15 +178,22 @@
     const track = YTMPlayerAdapter.read();
     return {...track, seekToken, enabled: settings.enabled && !settings.allowed[track.id]};
   }
-  function next(id, automaticReason = null) {
+  const skipController = new YTMSkipController({readTrack,nextButton:()=>YTMPlayerAdapter.nextButton()});
+  async function next(id, automaticReason = null) {
+    if (lastSkipped === id || skipController.busy) return {ok:false,reason:'busy'};
     const fresh = readTrack();
-    if (!id || fresh.id !== id || lastSkipped === id || !fresh.playing) return;
-    const button = YTMPlayerAdapter.nextButton();
-    if (!button || button.disabled || button.getAttribute('aria-disabled') === 'true') { status('nextUnavailable'); return; }
-    lastSkipped = id;
-    if (automaticReason) pendingSkip = {eventId:crypto.randomUUID(), id, title:fresh.title || id, time:Date.now(),
-      reason:automaticReason, score:automaticReason === 'model' ? scoreView.score : null};
-    status('skipping'); button.click();
+    const entry = automaticReason ? {eventId:crypto.randomUUID(),id,title:fresh.title || id,time:Date.now(),
+      reason:automaticReason,score:automaticReason === 'model' ? scoreView.score : null} : null;
+    if (entry) pendingSkip=entry;
+    status('skipping');
+    const result = await skipController.attempt(id);
+    if (result.ok) lastSkipped=id;
+    else {
+      if (pendingSkip===entry) pendingSkip=null;
+      if (result.reason==='unavailable') status('nextUnavailable');
+      else if (!['busy','ineligible'].includes(result.reason)) status('nextFailed');
+    }
+    return result;
   }
   el('analysis-toggle').onclick = async () => {
     el('analysis-toggle').disabled = true;
@@ -312,7 +319,7 @@
     el('warnings-button').setAttribute('aria-expanded',String(open));
     if(!open) warningPinned = false;
   });
-  chrome.runtime.onMessage.addListener(message => {
+  chrome.runtime.onMessage.addListener((message, sender, reply) => {
     if (message.type === 'MODEL_VERDICT' && message.id === current?.id) {
       modelVerdict = Boolean(message.detected); renderVerdict();
     }
@@ -320,6 +327,7 @@
       if (message.code) status(message.code, {...message.values, ...(message.code === 'captureError' ? {detail:message.detail} : {})});
       else status('listening');
       el('status').title = message.detail || message.text || '';
+      if (message.code==='slowAnalysis') el('age').title = `${message.detail || ''} · ${tr('slowAnalysis',message.values || {})}`;
     }
     if (message.type === 'SCORE_PENDING') {
       scoreView.reset(); lastScoreAt = 0; renderScore();
@@ -339,7 +347,10 @@
       el('countdown').setAttribute('aria-label', tr('countdown', {elapsed: YTMI18n.formatNumber(preferences.language, message.elapsed || 0), runs: message.runs || 0}));
       status('listening');
     }
-    if (message.type === 'SKIP' && settings.enabled && !settings.allowed[message.id] && !analysisPaused) next(message.id, 'model');
+    if (message.type === 'SKIP') {
+      if (!settings.enabled || settings.allowed[message.id] || analysisPaused) { reply({ok:false,reason:'disabled'}); return; }
+      next(message.id,'model').then(reply,()=>reply({ok:false,reason:'clickFailed'})); return true;
+    }
   });
   chrome.storage.onChanged.addListener((changes, area) => {
     if (area !== 'local') return;

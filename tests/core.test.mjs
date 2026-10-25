@@ -41,3 +41,21 @@ test('duplicate and missing samples never advance a run',()=>{
  const d=new Decision();d.sample(.9,1000,4000);d.sample(.9,2000,4000);assert.equal(d.seconds,0);
  d.sample(.9,3000,6000);assert.equal(d.seconds,0);
 });
+test('1.9-second inference cadence counts only real overlapping four-second windows',()=>{
+ const d=new Decision();
+ for(const [wall,end] of [[0,4000],[1900,5000],[3800,7000],[5700,9000]]) {
+  d.sample(.99,wall,end,end-4000);
+ }
+ assert.equal(d.seconds,5);assert.equal(d.tick(5700,true).skip,true);
+});
+test('coverage does not invent time between scores or bridge missing audio',()=>{
+ const d=new Decision();d.sample(.99,0,4000,0);
+ assert.equal(d.tick(2000,true).skip,false);assert.equal(d.seconds,0);
+ d.sample(.99,2000,9000,5000);assert.equal(d.seconds,0);
+ d.sample(.99,4000,11000,7000);assert.equal(d.seconds,2);
+ d.sample(.8,5900,13000,9000);assert.equal(d.seconds,0);assert.equal(d.ready,false);
+});
+test('invalid window spans and stale arrivals still reset timing',()=>{
+ const d=new Decision();d.sample(.99,0,4000,0);d.sample(.99,1900,6000,0);assert.equal(d.seconds,0);
+ d.sample(.99,5000,8000,4000);assert.equal(d.seconds,0);
+});

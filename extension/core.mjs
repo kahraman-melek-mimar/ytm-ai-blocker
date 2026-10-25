@@ -5,12 +5,16 @@ export class Decision {
     this.seconds = 0; this.last = null; this.since = null; this.sampleTime = null;
     this.ready = false; this.qualifyingRuns = 0; this.runCounted = false;
   }
-  sample(probability, now, sampleTime = now) {
+  sample(probability, now, sampleTime = now, windowStart = null) {
     if (!Number.isFinite(probability) || probability < 0 || probability > 1 || !Number.isFinite(sampleTime)) {
       this.reset(); return;
     }
     if (this.sampleTime !== null && sampleTime <= this.sampleTime) return;
-    if (this.last !== null && (now - this.last > 2500 || sampleTime - this.sampleTime > 1500)) this.reset();
+    // A real four-second analyzed window can bridge a slower inference cadence.
+    // Never bridge missing audio, an invalid span, stale delivery, or a held score.
+    const covered = Number.isFinite(windowStart) && Math.abs(sampleTime-windowStart-4000)<=1 &&
+      this.sampleTime !== null && windowStart <= this.sampleTime && sampleTime-this.sampleTime <= 4000;
+    if (this.last !== null && (now - this.last > 2500 || (sampleTime - this.sampleTime > 1500 && !covered))) this.reset();
     this.last = now; this.sampleTime = sampleTime;
     if (probability <= .8) {
       this.since = null; this.seconds = 0; this.ready = false; this.runCounted = false; return;

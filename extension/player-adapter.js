@@ -22,7 +22,8 @@
   }
   function nextButton(doc = document) {
     return doc.querySelector('ytmusic-wiz-player-controls .ytmusicPlayerControlsNextButton button') ||
-      doc.querySelector('ytmusic-wiz-player-controls button[aria-label="Next"], ytmusic-wiz-player-controls button[aria-label="Sonraki"]') ||
+      doc.querySelector('ytmusic-wiz-player-controls .ytmusicPlayerControlsNextButton') ||
+      doc.querySelector('ytmusic-wiz-player-controls button[aria-label^="Next"], ytmusic-wiz-player-controls button[aria-label^="Sonraki"]') ||
       doc.querySelector('ytmusic-player-bar .next-button');
   }
   globalThis.YTMPlayerAdapter = {read, nextButton};

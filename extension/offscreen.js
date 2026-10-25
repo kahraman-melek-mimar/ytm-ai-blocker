@@ -50,9 +50,10 @@ async function analyze(data){
     const loaded=await ready;
     if(!loaded)throw Object.assign(new Error('Bundled model could not load'),{code:'modelFailure'});
     if(!active || requestEpoch!==epoch)return;
+    const windowStart=data.sampleTime-data.samples.length/44100*1000;
     const result=await rpc('ANALYZE',{samples:data.samples});
     if(active && requestEpoch===epoch)await report({epoch:requestEpoch,probability:result.probability,
-      inferenceMs:result.inferenceMs,backend:result.backend,sampleTime:data.sampleTime,seconds:data.seconds});
+      inferenceMs:result.inferenceMs,backend:result.backend,sampleTime:data.sampleTime,windowStart,seconds:data.seconds});
   } catch(error){
     if(active && requestEpoch===epoch)await report({epoch:requestEpoch,error:error.message,errorCode:error.code || 'modelFailure'});
   } finally {
