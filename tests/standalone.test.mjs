@@ -20,7 +20,7 @@ function setup(){
 }
 test('standalone package contains model/runtime assets and no localhost permission',async()=>{
  const manifest=JSON.parse(await readFile(new URL('../extension/manifest.json',import.meta.url)));
- assert.equal(manifest.manifest_version,3);assert.equal(manifest.version,'4.0.4');
+ assert.equal(manifest.manifest_version,3);assert.equal(manifest.version,'4.0.9');
  assert.ok((await readFile(new URL('../extension/content.js',import.meta.url),'utf8')).includes(`const VERSION = '${manifest.version} Beta'`));
  assert.equal(manifest.cross_origin_embedder_policy,undefined);
  assert.equal(manifest.cross_origin_opener_policy,undefined);

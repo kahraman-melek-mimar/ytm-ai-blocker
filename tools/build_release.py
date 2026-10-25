@@ -29,8 +29,13 @@ for folder,suffixes in [('core',{'.mjs'}),('backend',{'.py','.sql'}),('tests',{'
     public.extend(p for p in (ROOT/folder).rglob('*') if p.is_file() and p.suffix in suffixes and '__pycache__' not in p.parts)
 public.extend(ROOT/'tools'/name for name in ['build_release.py','prepare_runtime.py','check_wasm.mjs','export_catalog.py'])
 user_files=extension+[ROOT/name for name in ['README.md','README.tr.md','PRIVACY.md','THIRD_PARTY_NOTICES.md']]+[ROOT/'docs/KNOWN-LIMITATIONS.md']
+optional_analysis=[ROOT/'tools/audio_analysis.py',ROOT/'tools/audio-analysis-requirements.txt',ROOT/'docs/AUDIO-ANALYSIS.md']
+user_files+=optional_analysis
+public+=optional_analysis
+launchers=[ROOT/name for name in ['START.html','START-Windows.cmd','START-macOS.command']]
+public+=launchers
 artifacts=[]
-for suffix,members in [('serverless',user_files),('source',extension+public)]:
+for suffix,members in [('serverless',user_files+launchers),('Windows',user_files+[ROOT/'START.html',ROOT/'START-Windows.cmd']),('macOS',user_files+[ROOT/'START.html',ROOT/'START-macOS.command']),('source',extension+public)]:
     name=f'ytm-ai-blocker-{VERSION}-{suffix}.zip';target=OUT/name
     with ZipFile(target,'w',ZIP_DEFLATED) as archive:
         for p in sorted(set(members)):

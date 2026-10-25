@@ -9,7 +9,7 @@ async function load(file) {
 test('TR and EN cover the same UI messages without unresolved placeholders', async () => {
   const {YTMI18n: {messages, translate}} = await load('i18n.js');
   assert.deepEqual(Object.keys(messages.tr).sort(), Object.keys(messages.en).sort());
-  assert.equal(translate('en', 'countdown', {elapsed: '3.0', runs: 1}), 'Time: 3.0 / 4 sec · Runs: 1 / 3');
+  assert.equal(translate('en', 'countdown', {elapsed: '3.0', runs: 1}), 'Time: 3.0 / 4 sec · Count: 1 / 3');
   assert.equal(translate('tr', 'block'), 'Parçayı Engelle ve Geç');
 });
 test('track block never blocks other songs by the same channel; allowance wins immediately', async () => {
@@ -64,4 +64,18 @@ test('release warning copy and meter labels are explicit in both languages', asy
  for(const lang of ['tr','en']) for(const key of ['warning_error','warning_dj','warning_classical']) assert.notEqual(translate(lang,key),key);
  assert.equal(translate('en','warning_dj'),'Not recommended for DJ music.');
  assert.equal(translate('tr','warning_classical'),'Klasik müziklerde kullanılması önerilmez.');
+});
+
+test('saved list links support legacy allowances and blocks without turning channel IDs into songs', async () => {
+ const {YTMTrackPolicy:p}=await load('track-policy.js');
+ assert.equal(p.listRecord('allowedEntry','i3f1pKJdwvA',true).url,'https://music.youtube.com/watch?v=i3f1pKJdwvA');
+ assert.equal(p.listRecord('blockedEntry','video:NPjIJC4ZE3k','Title').title,'Title');
+ assert.equal(p.listRecord('blockedEntry','channel:UClegacy','Channel').url,null);
+ assert.equal(p.trackURL('javascript:alert(1)'),null);
+ const settings={allowed:{},blocked:{}};
+ p.toggleAllow(settings,'i3f1pKJdwvA','Saved title');
+ assert.equal(settings.allowed.i3f1pKJdwvA,'Saved title');
+ assert.equal(p.isAllowed(settings,'i3f1pKJdwvA'),true);
+ p.toggleAllow(settings,'i3f1pKJdwvA','Saved title');
+ assert.equal(p.isAllowed(settings,'i3f1pKJdwvA'),false);
 });

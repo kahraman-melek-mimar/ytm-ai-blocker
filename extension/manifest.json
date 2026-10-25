@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "__MSG_extensionName__",
-  "version": "4.0.4",
+  "version": "4.0.9",
   "minimum_chrome_version": "116",
   "description": "__MSG_extensionDescription__",
   "permissions": [
@@ -48,7 +48,7 @@
     }
   ],
   "default_locale": "en",
-  "version_name": "4.0.4 Beta",
+  "version_name": "4.0.9 Beta",
   "content_security_policy": {
     "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'; worker-src 'self'"
   }

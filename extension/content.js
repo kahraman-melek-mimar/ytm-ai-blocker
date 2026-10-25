@@ -1,6 +1,6 @@
 (() => {
   if (document.getElementById('ytm-ai-blocker')) return;
-  const VERSION = '4.0.4 Beta';
+  const VERSION = '4.0.9 Beta';
   let settings = {enabled: false, blocked: {}, allowed: {}};
   let preferences = {language: navigator.language?.toLowerCase().startsWith('tr') ? 'tr' : 'en', position: null, dockVersion: 1};
   let current = null, lastSkipped = '', seekToken = 0, lastScoreAt = 0, lastLevelAt = 0;
@@ -17,14 +17,14 @@
   root.appendChild(css);
   const panel = document.createElement('section');
   panel.innerHTML = `<header><div id="handle" tabindex="0">⠿ YTM AI BLOCKER <small>v${VERSION}</small></div><select id="language"><option value="tr">TR</option><option value="en">EN</option></select></header>
-    <div class="meters"><div class="channel"><span id="left-label"></span><div class="vu-scale"><svg class="vu-ticks" id="left-ticks" viewBox="0 0 30 112" aria-hidden="true"></svg><div class="well" role="meter" aria-valuemin="-60" aria-valuemax="0" aria-valuenow="-60" id="left-meter"><div class="fill" id="left-fill"></div><div class="vu-peak" id="left-peak" aria-hidden="true"></div></div></div><span class="db" id="left-db">−∞</span></div>
+    <div class="meters"><div class="channel"><span id="left-label"></span><div class="vu-scale"><svg class="vu-ticks" id="left-ticks" viewBox="0 0 30 112" aria-hidden="true"></svg><div class="well" role="meter" aria-valuemin="-60" aria-valuemax="0" aria-valuenow="-60" id="left-meter"><div class="fill" id="left-fill"></div><div class="vu-peak" id="left-peak" aria-hidden="true"></div></div></div><span class="db" id="left-db">−∞&nbsp;dBFS</span></div>
     <div class="ai" id="ai" role="meter" aria-valuemin="0" aria-valuemax="100" aria-valuetext="—"><div class="spectrum" aria-hidden="true"></div><svg id="dial-ticks" viewBox="0 0 158 158" aria-hidden="true"></svg><div id="peak" aria-hidden="true" hidden></div><div class="readout"><small id="ai-label"></small><div id="score">—</div><div id="age"></div></div></div>
-    <div class="channel"><span id="right-label"></span><div class="vu-scale"><svg class="vu-ticks" id="right-ticks" viewBox="0 0 30 112" aria-hidden="true"></svg><div class="well" role="meter" aria-valuemin="-60" aria-valuemax="0" aria-valuenow="-60" id="right-meter"><div class="fill" id="right-fill"></div><div class="vu-peak" id="right-peak" aria-hidden="true"></div></div></div><span class="db" id="right-db">−∞</span></div></div>
+    <div class="channel"><span id="right-label"></span><div class="vu-scale"><svg class="vu-ticks" id="right-ticks" viewBox="0 0 30 112" aria-hidden="true"></svg><div class="well" role="meter" aria-valuemin="-60" aria-valuemax="0" aria-valuenow="-60" id="right-meter"><div class="fill" id="right-fill"></div><div class="vu-peak" id="right-peak" aria-hidden="true"></div></div></div><span class="db" id="right-db">−∞&nbsp;dBFS</span></div></div>
     <div id="status" role="status" aria-live="polite"></div><div id="countdown-slot"><progress id="countdown" hidden max="4" value="0"></progress></div>
     <div id="decision-basis"><div id="model-verdict"></div><div id="digital-proof"></div></div><div class="controls"><button id="analysis-toggle" type="button"></button><label class="switch" for="enabled"><span id="auto-label"></span><input id="enabled" type="checkbox"></label><div class="actions"><button id="allow"></button><button id="block"></button></div></div>
     <footer><span id="signature"></span><button id="lists"></button></footer><div class="brand"><button id="warnings-button" type="button" aria-describedby="warnings-popover" aria-expanded="false" aria-controls="warnings-popover">!</button><span id="dot"></span><a id="feedback" href="https://github.com/kahraman-melek-mimar/ytm-ai-blocker/issues/new" target="_blank" rel="noopener noreferrer">by Kahraman MELEK®</a></div>
     <div id="warnings-popover" popover="auto" role="tooltip"><strong id="warnings-title"></strong><ul><li id="warning-error"></li><li id="warning-dj"></li><li id="warning-classical"></li></ul></div>
-    <dialog id="manager"><h2 id="list-title"></h2><div id="list"></div><div class="dialog-actions"><button id="reset-position"></button><button id="close"></button></div></dialog>`;
+    <dialog id="manager" aria-labelledby="list-title"><h2 id="list-title" tabindex="0"></h2><div id="list"></div><div class="dialog-actions"><button id="reset-position"></button><button id="close"></button></div></dialog>`;
   root.appendChild(panel); document.documentElement.appendChild(host);
   const el = id => root.getElementById(id);
   const tr = (key, values) => YTMI18n.translate(preferences.language, key, values);
@@ -65,15 +65,38 @@
     el('signature').textContent = `${tr('origin')}: ${names.join(', ') || tr('none')}`;
     el('signature').title = tr('originHint');
   }
+  function copyButton(text, label = 'copy') {
+    const button = document.createElement('button'); button.textContent = tr(label);
+    button.onclick = async () => {
+      try {
+        await navigator.clipboard.writeText(text);
+        button.textContent = tr('copied');
+        setTimeout(() => { if (button.isConnected) button.textContent = tr(label); }, 2000);
+      } catch {
+        const area = document.createElement('textarea'); area.value = text; area.readOnly = true;
+        area.setAttribute('aria-label',tr('copyManual')); area.title = tr('copyManual');
+        button.after(area); area.focus(); area.select(); button.textContent = tr('copyManual');
+      }
+    };
+    return button;
+  }
   function renderLists() {
     el('list').replaceChildren();
+    const allURLs = [...Object.entries(settings.blocked).map(([key,value]) => YTMTrackPolicy.listRecord('blockedEntry',key,value).url),
+      ...Object.entries(settings.allowed).map(([key,value]) => YTMTrackPolicy.listRecord('allowedEntry',key,value).url),
+      ...skipHistory.map(item => YTMTrackPolicy.trackURL(item.id))].filter(Boolean);
+    if (allURLs.length) {
+      const copyAll = copyButton([...new Set(allURLs)].join('\n'), 'copyAll'); el('list').append(copyAll);
+    }
     for (const [kind, entries] of [['blockedEntry', settings.blocked], ['allowedEntry', settings.allowed]]) {
       for (const [key, value] of Object.entries(entries)) {
         const row = document.createElement('div'); row.className = 'entry';
-        const text = document.createElement('span'); text.textContent = `${tr(kind)} · ${typeof value === 'string' ? value : key}`;
+        const item = YTMTrackPolicy.listRecord(kind,key,value);
+        const text = document.createElement(item.url ? 'a' : 'span'); text.textContent = `${tr(kind)} · ${item.title}`;
+        if (item.url) { text.href = item.url; text.target = '_blank'; text.rel = 'noopener noreferrer'; }
         const button = document.createElement('button'); button.textContent = tr('remove');
         button.onclick = async () => { delete entries[key]; render(); await tick(); await saveSettings(); };
-        row.append(text, button); el('list').append(row);
+        const actions = document.createElement('div'); actions.className = 'list-actions'; if (item.url) actions.append(copyButton(item.url)); actions.append(button); row.append(text, actions); el('list').append(row);
       }
     }
     if (!el('list').childNodes.length) el('list').textContent = tr('empty');
@@ -91,7 +114,7 @@
       detail.textContent = `${time} · ${tr(item.reason === 'blocked' ? 'historyBlocked' : 'historyModel')}${Number.isFinite(item.score) ? ` · ${YTMI18n.formatPercent(preferences.language,item.score)}` : ''}`;
       const remove = document.createElement('button'); remove.textContent = tr('remove');
       remove.onclick = async () => { skipHistory = skipHistory.filter(row => row.eventId !== item.eventId); renderLists(); await chrome.storage.local.set({skipHistory}); };
-      row.append(link,detail,remove); el('list').append(row);
+      const actions = document.createElement('div'); actions.className = 'list-actions'; actions.append(copyButton(link.href),remove); row.append(link,detail,actions); el('list').append(row);
     }
   }
   function renderCapture() {
@@ -121,7 +144,7 @@
     el('allow').textContent = tr(settings.allowed[current?.id] ? 'revoke' : 'allow');
     el('allow').classList.toggle('is-allowed', Boolean(settings.allowed[current?.id]));
     el('block').textContent = tr('block'); el('lists').textContent = tr('lists');
-    el('list-title').textContent = tr('lists'); el('close').textContent = tr('close'); el('reset-position').textContent = tr('resetPosition');
+    el('list-title').textContent = tr('lists'); el('list-title').title = tr('listMoveHint'); el('list-title').setAttribute('aria-label', `${tr('lists')} · ${tr('listMoveHint')}`); el('close').textContent = tr('close'); el('reset-position').textContent = tr('resetPosition');
     status(messageState.code === 'countdown' ? 'listening' : messageState.code, messageState.values); renderOrigin(); renderLists(); renderScore(); renderVerdict(); renderCapture();
   }
   function renderVerdict() {
@@ -148,7 +171,7 @@
     peakView.accept((db + 60) / 60, 1);
     el(`${channel}-peak`).style.transform = `translateY(${100 - peakView.peak}%)`;
     el(`${channel}-fill`).style.clipPath = `inset(${100 - (db + 60) / 60 * 100}% 0 0)`;
-    el(`${channel}-db`).textContent = rms > .001 ? `${Math.round(db)}` : '−∞';
+    el(`${channel}-db`).textContent = rms > .001 ? `${Math.round(db)}\u00a0dBFS` : '−∞\u00a0dBFS';
     el(`${channel}-meter`).setAttribute('aria-valuenow', String(Math.round(db)));
   }
   function readTrack() {
@@ -179,12 +202,62 @@
   };
   el('allow').onclick = async () => {
     const track = readTrack(); if (!track.id) return;
-    YTMTrackPolicy.toggleAllow(settings, track.id);
+    YTMTrackPolicy.toggleAllow(settings, track.id, track.title);
     render(); await tick(); await saveSettings();
   };
   el('language').onchange = async event => { preferences.language = event.target.value; render(); await savePreferences(); };
-  el('lists').onclick = () => { renderLists(); el('manager').showModal(); };
+  el('lists').onclick = () => { renderLists(); el('manager').showModal(); restoreListWindow(); };
   el('close').onclick = () => el('manager').close();
+  const manager = el('manager'), listHandle = el('list-title');
+  let listOffset = null, listSaveTimer;
+  function fitListWindow(left, top) {
+    const rect = manager.getBoundingClientRect();
+    const width = Math.min(rect.width, Math.max(1, innerWidth - 16));
+    const height = Math.min(rect.height, Math.max(1, innerHeight - 16));
+    manager.style.width = `${width}px`; manager.style.height = `${height}px`;
+    manager.style.margin = '0'; manager.style.right = 'auto'; manager.style.bottom = 'auto';
+    manager.style.left = `${Math.max(8, Math.min(left, innerWidth - width - 8))}px`;
+    manager.style.top = `${Math.max(8, Math.min(top, innerHeight - height - 8))}px`;
+  }
+  function rememberListWindow() {
+    if (!manager.open) return;
+    const {left,top,width,height} = manager.getBoundingClientRect();
+    preferences.listWindow = {left,top,width,height};
+    clearTimeout(listSaveTimer);
+    listSaveTimer = setTimeout(() => savePreferences().catch(() => {}), 200);
+  }
+  function restoreListWindow() {
+    const saved = preferences.listWindow;
+    if (saved && [saved.left,saved.top,saved.width,saved.height].every(Number.isFinite)) {
+      manager.style.width = `${Math.max(260,saved.width)}px`;
+      manager.style.height = `${Math.max(220,saved.height)}px`;
+      fitListWindow(saved.left,saved.top);
+    } else {
+      const rect = manager.getBoundingClientRect();
+      fitListWindow((innerWidth-rect.width)/2,(innerHeight-rect.height)/2);
+    }
+  }
+  listHandle.onpointerdown = event => {
+    if (event.button !== 0) return;
+    const rect = manager.getBoundingClientRect(); listOffset = {x:event.clientX-rect.left,y:event.clientY-rect.top};
+    listHandle.setPointerCapture(event.pointerId); listHandle.classList.add('dragging');
+  };
+  listHandle.onpointermove = event => {
+    if (listOffset && listHandle.hasPointerCapture(event.pointerId)) fitListWindow(event.clientX-listOffset.x,event.clientY-listOffset.y);
+  };
+  listHandle.onpointerup = event => { if (listHandle.hasPointerCapture(event.pointerId)) listHandle.releasePointerCapture(event.pointerId); };
+  listHandle.onlostpointercapture = () => { listOffset=null; listHandle.classList.remove('dragging'); rememberListWindow(); };
+  listHandle.onkeydown = event => {
+    const delta = {ArrowLeft:[-15,0],ArrowRight:[15,0],ArrowUp:[0,-15],ArrowDown:[0,15]}[event.key];
+    if (!delta) return;
+    event.preventDefault(); const rect=manager.getBoundingClientRect(); fitListWindow(rect.left+delta[0],rect.top+delta[1]); rememberListWindow();
+  };
+  new ResizeObserver(() => {
+    if (!manager.open) return;
+    const rect=manager.getBoundingClientRect(); fitListWindow(rect.left,rect.top); rememberListWindow();
+  }).observe(manager);
+  addEventListener('resize', () => { if (manager.open) { const rect=manager.getBoundingClientRect(); fitListWindow(rect.left,rect.top); rememberListWindow(); } });
+  manager.addEventListener('close', () => { clearTimeout(listSaveTimer); savePreferences().catch(() => {}); });
   let offset = null;
   function moveTo(left, top) {
     const rect = host.getBoundingClientRect();

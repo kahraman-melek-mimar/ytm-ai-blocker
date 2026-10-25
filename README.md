@@ -6,7 +6,7 @@ On-device audio estimates, stereo meters and optional track skipping for YouTube
 
 | Edition | Local server? | Download |
 |---|---|---|
-| **4.0.4 Beta — serverless** | **No** Python, terminal or helper server | [Ready-to-load ZIP](https://github.com/kahraman-melek-mimar/ytm-ai-blocker/releases/download/v4.0.4-beta.1/ytm-ai-blocker-4.0.4-beta.1-serverless.zip) |
+| **4.0.9 Beta — serverless** | **No** Python, terminal or helper server | [Ready-to-load ZIP](https://github.com/kahraman-melek-mimar/ytm-ai-blocker/releases/download/v4.0.9-beta.1/ytm-ai-blocker-4.0.9-beta.1-serverless.zip) |
 | **3.4.1 — Local Server Edition** | **Yes**, keep its Python helper running | [Server edition release](https://github.com/kahraman-melek-mimar/ytm-ai-blocker/releases/tag/v3.4.1) · [server branch](https://github.com/kahraman-melek-mimar/ytm-ai-blocker/tree/v3-server) |
 
 **Beta: mistakes are possible. Not recommended for DJ or classical music.** Scores are model estimates, not calibrated probabilities or proof of AI origin. AI-generated tracks can be missed and genuine recordings can be flagged.
@@ -20,7 +20,7 @@ For desktop Chrome/compatible Chromium 116+. One extension package is intended f
 3. Select the extracted **extension** folder containing `manifest.json`, not the outer ZIP folder.
 4. Disable any old V3/V4 test copy, refresh YouTube Music, and play music.
 5. Click the puzzle-piece icon in Chrome's toolbar, then **YTM AI Blocker … V4 Beta**. Pin it if desired. This first click starts tab audio capture.
-6. The panel should show **v4.0.4 Beta**. Auto-skip starts **off** on a fresh installation; meters and analysis still work. Enable auto-skip in the panel if desired.
+6. The panel should show **v4.0.9 Beta**. Auto-skip starts **off** on a fresh installation; meters and analysis still work. Enable auto-skip in the panel if desired.
 
 The package already contains the model and required JavaScript/WebAssembly files. **No Python, npm, terminal command or local HTTP server is required by users.** It is a manually loaded Chrome extension, not a double-click desktop executable or a Chrome Web Store installation. For updates, replace the extracted folder contents with a new release, reload the extension and refresh YouTube Music. Manual loading does not provide automatic updates.
 
@@ -51,3 +51,11 @@ The `backend/` and catalog-related `core/` modules are an experimental local fou
 ArtifactNet v9.4 (intrect / Heewon Oh) is bundled under **CC BY-NC 4.0**, with its owner's additional patent notices. Model weights are unchanged; a documented zero-denominator graph guard fixes numerical errors, not classification accuracy. This application grants no commercial or patent license. ONNX Runtime Web 1.30.0 is MIT-licensed. See [third-party notices](THIRD_PARTY_NOTICES.md) and the bundled model card. No permissive license has been selected for the application source; public visibility is not an additional license grant.
 
 GitHub distribution only. No Chrome Web Store listing is claimed.
+
+## Optional Python analysis — local 4.0.9 Beta
+
+See the [Python analysis guide](docs/AUDIO-ANALYSIS.md) for selected local audio files. The extension remains serverless; the Python tool runs separately and does not produce AI verdicts. The GitHub download above is the published 4.0.9 release; 4.0.9 is the current Beta.
+
+## Windows and macOS starter packages
+
+[Windows ZIP](https://github.com/kahraman-melek-mimar/ytm-ai-blocker/releases/download/v4.0.9-beta.1/ytm-ai-blocker-4.0.9-beta.1-Windows.zip) · [macOS ZIP](https://github.com/kahraman-melek-mimar/ytm-ai-blocker/releases/download/v4.0.9-beta.1/ytm-ai-blocker-4.0.9-beta.1-macOS.zip). Extract, then open START-Windows.cmd or START-macOS.command. Chrome requires a manual first Load unpacked step. If the launcher does not run, open START.html. This is a Chrome extension, not a standalone desktop application. No live Windows verification is claimed.

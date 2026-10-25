@@ -6,7 +6,7 @@ YouTube Music için cihazda ses analizi, stereo metreler ve isteğe bağlı par�
 
 | Ürün | Yerel sunucu gerekir mi? | İndir |
 |---|---|---|
-| **4.0.4 Beta — sunucusuz** | **Hayır.** Python veya terminal gerekmez | [Yüklemeye hazır ZIP](https://github.com/kahraman-melek-mimar/ytm-ai-blocker/releases/download/v4.0.4-beta.1/ytm-ai-blocker-4.0.4-beta.1-serverless.zip) |
+| **4.0.9 Beta — sunucusuz** | **Hayır.** Python veya terminal gerekmez | [Yüklemeye hazır ZIP](https://github.com/kahraman-melek-mimar/ytm-ai-blocker/releases/download/v4.0.9-beta.1/ytm-ai-blocker-4.0.9-beta.1-serverless.zip) |
 | **3.4.1 — sunuculu sürüm** | **Evet.** Python yardımcısı analiz boyunca açık kalmalıdır | [Sunuculu yayın](https://github.com/kahraman-melek-mimar/ytm-ai-blocker/releases/tag/v3.4.1) · [sunuculu kaynaklar](https://github.com/kahraman-melek-mimar/ytm-ai-blocker/tree/v3-server) |
 
 **Beta sürüm hata yapabilir. DJ ve klasik müzik için önerilmez.** Model skoru kesin YZ kararı veya üretim kanıtı değildir. İnsan yapımı kayıtlar yanlış işaretlenebilir, YZ kayıtları kaçırılabilir.
@@ -20,7 +20,7 @@ Masaüstü Chrome/uyumlu Chromium 116+ içindir. Aynı paket Windows, Linux ve m
 3. **Paketlenmemiş öğe yükle** düğmesine basıp ZIP'ten çıkan **extension** klasörünü seçin. Seçtiğiniz klasörde `manifest.json` olmalıdır.
 4. Eski V3/V4 test kopyasını kapatın. YouTube Music'i yenileyin ve müzik çalın.
 5. Chrome araç çubuğundaki **yapboz** simgesine, ardından **YTM AI Blocker … V4 Beta** adına tıklayın. İsterseniz raptiyeyle sabitleyin. İlk tıklama sekme sesini yakalamayı başlatır.
-6. Panelde **v4.0.4 Beta** görünmelidir. Yeni kurulumda **Otomatik atla kapalı** başlar; analiz ve metreler çalışır. İsterseniz panelden açın.
+6. Panelde **v4.0.9 Beta** görünmelidir. Yeni kurulumda **Otomatik atla kapalı** başlar; analiz ve metreler çalışır. İsterseniz panelden açın.
 
 Model ve çalışma dosyaları ZIP'te hazırdır. **Kullanıcı için Python, npm, terminal veya yerel sunucu kurulumu yoktur.** Bu paket çift tıklanan bir masaüstü uygulaması veya mağazadan tek tık kurulum değildir; Chrome'a klasör olarak yüklenir. Güncellemede yeni dosyaları aynı klasöre çıkarın, eklentiyi yeniden yükleyin ve YouTube Music'i yenileyin. GitHub'dan elle kurulum otomatik güncelleme sağlamaz.
 
@@ -51,3 +51,11 @@ Kullanıcılar yalnızca ZIP'i yükler. Geliştirici kontrolleri: `npm ci`, `npm
 ArtifactNet v9.4 (intrect / Heewon Oh) **CC BY-NC 4.0** ve model sahibinin ek patent bildirimleriyle paketlenmiştir. Ağırlıklar değişmedi; iki sıfır payda için grafikte sayısal koruma vardır. Bu düzeltme doğruluk garantisi değildir. Ticari veya patent kullanım hakkı verilmez. ONNX Runtime Web 1.30.0 MIT lisanslıdır. [Üçüncü taraf bildirimleri](THIRD_PARTY_NOTICES.md). Uygulama kaynakları için ayrıca serbest kullanım lisansı seçilmedi; deponun açık olması ek lisans hakkı sağlamaz.
 
 Yayın GitHub üzerindedir; Chrome Web Store yayını yapılmadı.
+
+## İsteğe bağlı Python analizi — yerel 4.0.9 Beta
+
+Seçtiğiniz ses dosyalarını bilgisayarda incelemek için [Python analiz rehberine](docs/AUDIO-ANALYSIS.md) bakın. Eklenti sunucusuzdur; Python aracı ayrı çalışır ve YZ kararı vermez. Yukarıdaki GitHub bağlantısı yayımlanmış 4.0.9 sürümüne aittir; 4.0.9 güncel Beta sürümüdür.
+
+## Windows ve macOS başlangıç paketleri
+
+[Windows ZIP](https://github.com/kahraman-melek-mimar/ytm-ai-blocker/releases/download/v4.0.9-beta.1/ytm-ai-blocker-4.0.9-beta.1-Windows.zip) · [macOS ZIP](https://github.com/kahraman-melek-mimar/ytm-ai-blocker/releases/download/v4.0.9-beta.1/ytm-ai-blocker-4.0.9-beta.1-macOS.zip). ZIP’i çıkartıp Windows’ta START-Windows.cmd, macOS’ta START-macOS.command dosyasını açın. Chrome’un ilk paketlenmemiş eklenti yükleme adımı kullanıcı tarafından yapılır. Başlatıcı açılamazsa START.html rehberini açın. Bağımsız masaüstü uygulaması değildir. Windows canlı testi henüz yapılmadı.
